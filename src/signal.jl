@@ -4,7 +4,7 @@
 # discrete. It's just when the signal is based on a Range time type that there's
 # special optimizations we can make.
 # abstract DiscreteSignal{N, T, S}   <: AbstractSignal{N, T, S}
-# abstract ContinuousSignal{N, T, S} <: AbstractSignal{N, T, S}
+# abstract RegularSignal{N, T, S} <: AbstractSignal{N, T, S}
 
 # A signal has a common timebase (a vector of type T), and a vector of N
 # channels (a number of vectors of type S).
@@ -25,15 +25,23 @@ Signal(time::AbstractVector, channels::AbstractVector...) = Signal(time, [c for 
 # per timepoint within one channel (which is uncommon), use a vector of vectors.
 Signal(time::AbstractVector, data::AbstractMatrix) = Signal(time, [view(data, :, i) for i = 1:size(data,2)])
 
-# Not sure about the naming here.
-typealias ContinuousSignal{N, T<:Range, S<:AbstractVector} Signal{N, T, S}
+# An evenly sampled signal. Allows for optimizations and saves storage space
+typealias RegularSignal{N, T<:Range, S<:AbstractVector} Signal{N, T, S}
+# Not sure about the naming here. I want to describe an evenly sampled signal,
+# with functions to test (is*) and convert/ensure the signal is* (make*?)
+# RegularSignal: nice verb (regularize); Grid.jl uses Irregular for the opposite
+# ContinuousSignal: has a nice connotation with time, but isn't accurate
+# UniformSignal: isuniform sounds nice
+# GriddedSignal: aligns with Grid.jl, but strong connotations with 2D data
+# LinearSignal: linspace; nice verb, but sounds like the signal itself is linear
+# StepSignal? EvenlySampledSignal?
 
 ## New and specific functions for Signals
 # Test if the channels are all of the same type
 ishomogeneous{N,T,S}(::Signal{N,T,S}) = isleaftype(S) || S === None
 # Technically all signals are discrete, but consider Range time to be continuous
 iscontinuous(::Signal) = false
-iscontinuous(::ContinuousSignal) = true
+iscontinuous(::RegularSignal) = true
 # Return an array of the type of each channel
 channeltypes(s::Signal) = Type[typeof(c) for c in s]
 
