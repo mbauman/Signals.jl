@@ -4,7 +4,12 @@ import Base: elsize
 import ArrayViews: view
 import Sparklines: spark
 
-export Signal, ishomogeneous, iscontinuous, channeltypes
+export Signal,
+       RegularSignal,
+       regularize,
+       isregular,
+       ishomogeneous,
+       channeltypes
 
 include("signal.jl")
 

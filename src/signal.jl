@@ -38,12 +38,20 @@ typealias RegularSignal{N, T<:Range, S<:AbstractVector} Signal{N, T, S}
 # LinearSignal: linspace; nice verb, but sounds like the signal itself is linear
 # StepSignal? EvenlySampledSignal?
 
-## New and specific functions for Signals
+# Convert to a RegularSignal by blindly shifting time underneath the channels
+# TODO: perhaps I should check the variance of diff(s.time)?
+regularize(s::RegularSignal) = s
+regularize(s::Signal) = Signal(linrange(s.time[1],s.time[end],length(s.time)), s.channels)
+if !isdefined(Base, :linrange)
+    # PR 6627: https://github.com/JuliaLang/julia/pull/6627
+    linrange(a::Real,b::Real,len::Integer) = len >= 2 ? range(a, (b-a)/(len-1),len) : len == 1 && a == b ? range(a, zero((b-a)/(len-1)), 1) : error("invalid range length")
+end
+# Test if a signal is "regular" -- that is, it is sampled at an exact interval
+isregular(::Signal) = false
+isregular(::RegularSignal) = true
+
 # Test if the channels are all of the same type
 ishomogeneous{N,T,S}(::Signal{N,T,S}) = isleaftype(S) || S === None
-# Technically all signals are discrete, but consider Range time to be continuous
-iscontinuous(::Signal) = false
-iscontinuous(::RegularSignal) = true
 # Return an array of the type of each channel
 channeltypes(s::Signal) = Type[typeof(c) for c in s]
 
