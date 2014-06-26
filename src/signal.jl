@@ -24,6 +24,8 @@ Signal(time::AbstractVector, channels::AbstractVector...) = Signal(time, [c for 
 # Matrices are assumed to be grouped signals. If you want multiple datapoints
 # per timepoint within one channel (which is uncommon), use a vector of vectors.
 Signal(time::AbstractVector, data::AbstractMatrix) = Signal(time, [view(data, :, i) for i = 1:size(data,2)])
+# For simple testing, allow vectorized functions (splat to improve inference)
+Signal(time::AbstractVector, fcns::Vector{Function}) = Signal(time, [f(time) for f in fcns]...)
 
 # An evenly sampled signal. Allows for optimizations and saves storage space
 typealias RegularSignal{N, T<:Range, S<:AbstractVector} Signal{N, T, S}
