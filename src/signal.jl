@@ -94,7 +94,7 @@ function Base.writemime{N,T,S}(io::IO, ::MIME"text/plain", s::Signal{N,T,S})
     println(io, ":")
     print(io, "  Each channel has $(length(s.time)) datapoints of type $S")
     
-    if N == 1 && elsize(s[1])[1] > 1 && length(elsize(s[1])) == 1
+    if N == 1 && !isempty(s[1]) && size(s[1][1],1) > 1 && ndims(s[1][1]) == 1
         # Only one channel, but multiple datapoints per timepoint
         # Gather the times
         sig = s[1]

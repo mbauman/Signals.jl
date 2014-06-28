@@ -7,7 +7,8 @@
 # But perhaps simply returning the result is all we need here.
 import Grid
 
-function Grid.interp{N,T,S}(s::RegularSignal{N,T,S}, ti::AbstractVector)
+# Can't parameterize RegularSignal due to typealias issues (#7453: #2552, #6721)
+function Grid.interp{N,T<:Range,S}(s::Signal{N,T,S}, ti::AbstractVector)
     vi = Array(S,N)
     # Using a Regular Grid is a little awkward, but more performant; it assumes the original basis is 1:N
     t = s.time
