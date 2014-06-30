@@ -15,3 +15,10 @@ si = interp(s,ti)
 @test_approx_eq si[1] [ti]
 @test_approx_eq si[2] 2*[ti]
 @test_approx_eq si[3] -[ti]
+
+# Test interpolating a ContinuousView
+s = Signal([t], [t 2t -t])
+si = interp(s,ti)
+@test_approx_eq si[1] [ti]
+@test_approx_eq si[2] 2*[ti]
+@test_approx_eq si[3] -[ti]
