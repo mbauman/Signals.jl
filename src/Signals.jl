@@ -15,6 +15,7 @@ export Signal,
        interp
 
 include("signal.jl")
+include("show.jl")
 include("interpolation.jl")
 
 end # module

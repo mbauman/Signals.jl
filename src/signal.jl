@@ -82,39 +82,3 @@ Base.isempty{N}(s::Signal{N}) = (N == 0)
 # Base.prepend!(s::Signal, chans::AbstractVector) = prepend!(s.channels, chans)
 # Base.deleteat!(s::Signal, i::Integer) = deleteat!(s.channels, i)
 # Base.insert!(s::Signal, i::Integer, item<:AbstractVector) = insert!(s.channels, i, item)
-
-# Show
-Base.summary{N}(s::Signal{N}) = "$(typeof(s).name) with $N channel$(N==1?"":"s") over t=$(s.time[1]) to $(s.time[end])"
-function Base.summary{N,T<:Range}(s::Signal{N,T}) 
-    string(invoke(summary, (Signal{N},), s), ", at $(round(1/step(s.time),1)) Hz")
-end
-function Base.writemime{N,T,S}(io::IO, ::MIME"text/plain", s::Signal{N,T,S})
-    print(io, summary(s))
-    N == 0 && return
-    println(io, ":")
-    print(io, "  Each channel has $(length(s.time)) datapoints of type $S")
-    
-    if N == 1 && !isempty(s[1]) && size(s[1][1],1) > 1 && ndims(s[1][1]) == 1
-        # Only one channel, but multiple datapoints per timepoint
-        # Gather the times
-        sig = s[1]
-        rows, cols = int(get(ENV, "ROWS", "24"))-3, min(int(get(ENV, "COLS", "80")), length(s.time))
-        ts = Array(ByteString, rows)
-        for i=1:length(ts)
-            ts[i] = string(s.time[i], ": ")
-        end
-        twidth = maximum([strwidth(t) for t in ts]) + 2
-        # And display the values for each time
-        for i=1:length(ts)
-            println(io)
-            print(io, lpad(ts[i], twidth))
-            if length(sig[i]) > cols - twidth
-                spark(io, view(sig[i], 1:(cols - twidth - 2), i))
-                print(io, " …")
-            else
-                spark(io, sig[i])
-            end
-        end
-    else
-    end
-end
