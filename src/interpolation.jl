@@ -10,7 +10,7 @@ import ArrayViews: ArrayView
 
 # Can't parameterize RegularSignal due to typealias issues (#7453: #2552, #6721)
 function Grid.interp{N,T<:Range,S}(s::Signal{N,T,S}, ti::AbstractVector)
-    vi = S<:ArrayView ? Array(Array{eltype(S),1},N): Array(S,N)
+    vi = S<:ArrayView ? Array(Array{eltype(S),1},N) : Array(S,N)
     # Using a Regular Grid is a little awkward, but more performant; it assumes the original basis is 1:N
     t = s.time
     # So convert ti to "indices" relative to s.time
@@ -23,7 +23,7 @@ function Grid.interp{N,T<:Range,S}(s::Signal{N,T,S}, ti::AbstractVector)
 end
 
 function Grid.interp{N,T,S}(s::Signal{N,T,S}, ti::AbstractVector)
-    vi = S<:ArrayView ? Array(Array{eltype(S),1},N): Array(S,N)
+    vi = S<:ArrayView ? Array(Array{eltype(S),1},N) : Array(S,N)
     t = s.time
     for (i,chan) in enumerate(s)
         gi = Grid.InterpIrregular(t, chan, Grid.BCnan, Grid.InterpLinear)
