@@ -1,13 +1,15 @@
 # I'm not sure that these would be useful in dispatch
 # abstract AbstractSignal{N, T<:AbstractVector, S<:AbstractVector} <: AbstractVector{S}
-# What's the difference between a discrete and continuous signal? They're all
-# discrete. It's just when the signal is based on a Range time type that there's
+# What'sig the difference between a discrete and continuous signal? They're all
+# discrete. It'sig just when the signal is based on a Range time type that there'sig
 # special optimizations we can make.
 # abstract DiscreteSignal{N, T, S}   <: AbstractSignal{N, T, S}
 # abstract RegularSignal{N, T, S} <: AbstractSignal{N, T, S}
 
-# A signal has a common timebase (a vector of type T), and a vector of N
-# channels (a number of vectors of type S).
+import SIUnits
+
+# A signal has a common timebase (a vector of type T) in seconds, 
+# and a vector of N channels (a number of vectors of type S).
 type Signal{N, T<:AbstractVector, S<:AbstractVector} <: AbstractVector{S}
     time::T
     channels::Vector{S}
@@ -18,6 +20,7 @@ function Signal{T<:AbstractVector, S<:AbstractVector}(time::T, channels::Vector{
     for c in channels
         length(time) != length(c) && throw(ArgumentError("each channel must be the same length as time"))
     end
+    eltype(time) <: SIUnits.SIQuantity && @assert(SIUnits.unit(time[1]) === Second)
     Signal{length(channels), T, S}(time, channels)
 end
 Signal(time::AbstractVector, channels::AbstractVector...) = Signal(time, [c for c in channels])
@@ -39,9 +42,9 @@ typealias RegularSignal{N, T<:Range, S<:AbstractVector} Signal{N, T, S}
 # StepSignal? EvenlySampledSignal?
 
 # Convert to a RegularSignal by blindly shifting time underneath the channels
-# TODO: perhaps I should check the variance of diff(s.time)?
-regularize(s::RegularSignal) = s
-regularize(s::Signal) = Signal(linrange(s.time[1],s.time[end],length(s.time)), s.channels)
+# TODO: perhaps I should check the variance of diff(sig.time)?
+regularize(sig::RegularSignal) = sig
+regularize(sig::Signal) = Signal(linrange(sig.time[1],sig.time[end],length(sig.time)), sig.channels)
 if !isdefined(Base, :linrange)
     # PR 6627: https://github.com/JuliaLang/julia/pull/6627
     linrange(a::Real,b::Real,len::Integer) = len >= 2 ? range(a, (b-a)/(len-1),len) : len == 1 && a == b ? range(a, zero((b-a)/(len-1)), 1) : error("invalid range length")
@@ -53,32 +56,32 @@ isregular(::RegularSignal) = true
 # Test if the channels are all of the same type
 ishomogeneous{N,T,S}(::Signal{N,T,S}) = isleaftype(S) || S === None
 # Return an array of the type of each channel
-channeltypes(s::Signal) = Type[typeof(c) for c in s]
+channeltypes(sig::Signal) = Type[typeof(c) for c in sig]
 
 ## Index and iterate over the signal columns of .channels
 Base.length{N}(::Signal{N}) = N
 Base.size{N}(::Signal{N}) = (N,)
 Base.size{N}(::Signal{N}, I::Int) = I==1 ? N : I>1 ? 1 : throw(BoundsError())
 Base.ndims(::Signal) = 1
-Base.elsize(s::Signal) = (length(s.time),)
+Base.elsize(sig::Signal) = (length(sig.time),)
 Base.eltype{N,T,S}(::Signal{N,T,S}) = S
 
 # TODO: Perhaps allow custom names/indexes like DataFrames?
-Base.getindex(s::Signal, idx::Real=1) = s.channels[idx]
-Base.getindex(s::Signal, idx::Range)  = s.channels[idx]
-view(s::Signal, idx::Real=1) = view(s.channels, idx)
-view(s::Signal, idx::Range)  = view(s.channels, idx)
+Base.getindex(sig::Signal, idx::Real=1) = sig.channels[idx]
+Base.getindex(sig::Signal, idx::Range)  = sig.channels[idx]
+view(sig::Signal, idx::Real=1) = view(sig.channels, idx)
+view(sig::Signal, idx::Range)  = view(sig.channels, idx)
 
 # Iteration
 Base.start(::Signal) = 1
-Base.next(s::Signal, i) = (s.channels[i], i+1)
-Base.done{N}(s::Signal{N}, i) = (i > N)
-Base.isempty{N}(s::Signal{N}) = (N == 0)
+Base.next(sig::Signal, i) = (sig.channels[i], i+1)
+Base.done{N}(sig::Signal{N}, i) = (i > N)
+Base.isempty{N}(sig::Signal{N}) = (N == 0)
 
-# Mutation? Let's leave it out for now.
+# Mutation? Let'sig leave it out for now.
 # With the typed channel vector, push! probably wouldn't work most of the time.
-# Base.push!(s::Signal, chan::AbstractVector...) = push!(s.channels, chan...)
-# Base.append!(s::Signal, chans::AbstractVector)  = append!(s.channels, chans)
-# Base.prepend!(s::Signal, chans::AbstractVector) = prepend!(s.channels, chans)
-# Base.deleteat!(s::Signal, i::Integer) = deleteat!(s.channels, i)
-# Base.insert!(s::Signal, i::Integer, item<:AbstractVector) = insert!(s.channels, i, item)
+# Base.push!(sig::Signal, chan::AbstractVector...) = push!(sig.channels, chan...)
+# Base.append!(sig::Signal, chans::AbstractVector)  = append!(sig.channels, chans)
+# Base.prepend!(sig::Signal, chans::AbstractVector) = prepend!(sig.channels, chans)
+# Base.deleteat!(sig::Signal, i::Integer) = deleteat!(sig.channels, i)
+# Base.insert!(sig::Signal, i::Integer, item<:AbstractVector) = insert!(sig.channels, i, item)
