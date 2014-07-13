@@ -78,10 +78,6 @@ Base.next(sig::Signal, i) = (sig.channels[i], i+1)
 Base.done{N}(sig::Signal{N}, i) = (i > N)
 Base.isempty{N}(sig::Signal{N}) = (N == 0)
 
-# Mutation? Let'sig leave it out for now.
-# With the typed channel vector, push! probably wouldn't work most of the time.
-# Base.push!(sig::Signal, chan::AbstractVector...) = push!(sig.channels, chan...)
-# Base.append!(sig::Signal, chans::AbstractVector)  = append!(sig.channels, chans)
-# Base.prepend!(sig::Signal, chans::AbstractVector) = prepend!(sig.channels, chans)
-# Base.deleteat!(sig::Signal, i::Integer) = deleteat!(sig.channels, i)
-# Base.insert!(sig::Signal, i::Integer, item<:AbstractVector) = insert!(sig.channels, i, item)
+# Information about regular signals:
+fs(sig::RegularSignal) = 1/step(sig.time)
+rate(sig::RegularSignal) = step(sig.time)

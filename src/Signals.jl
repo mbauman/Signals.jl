@@ -18,10 +18,14 @@ export Signal,
        isregular,
        ishomogeneous,
        channeltypes,
-       interp
+       interp,
+       fs,
+       rate,
+       window
 
 include("signal.jl")
 include("show.jl")
 include("interpolation.jl")
+include("time.jl")
 
 end # module

@@ -1,5 +1,5 @@
 
-Base.summary{N}(sig::Signal{N}) = "$(typeof(sig).name) with $N channel$(N==1?"":"sig") over t=$(sig.time[1]) to $(sig.time[end])"
+Base.summary{N}(sig::Signal{N}) = "$(typeof(sig).name) with $N channel$(N==1?"":"s") over t=$(sig.time[1]) to $(sig.time[end])"
 
 # Show the sampling rate if we know it
 function Base.summary(sig::RegularSignal)
