@@ -13,6 +13,7 @@ const μs = µs # \mu != \micro. https://github.com/Keno/SIUnits.jl/issues/23
 export Second, s, ms, µs, μs
 
 export Signal,
+       signal,
        RegularSignal,
        regularize,
        isregular,
