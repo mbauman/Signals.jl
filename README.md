@@ -7,6 +7,7 @@ A package specialized for signals that vary over time, where time is measured in
 ## Example usage:
 
     julia> Pkg.clone("https://github.com/mbauman/Signals.jl.git")
+           Pkg.checkout("SIUnits") # Currently requires the master branch
            using Signals
            
     julia> fs = 40000 # Generate a 40kHz noisy signal, with spike-like stuff added for testing
