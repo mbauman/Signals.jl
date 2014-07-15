@@ -1,28 +1,28 @@
 ## Signal creation
 
 # With no elements
-s = signal(1:100)
-@test length(s) == 0
-@test s.time == 1:100
-@test_throws BoundsError s[0]
-@test_throws BoundsError s[1]
-@test ishomogeneous(s)
+sig = signal(1:100)
+@test length(sig) == 0
+@test sig.time == 1s:100s
+@test_throws BoundsError sig[0]
+@test_throws BoundsError sig[1]
+@test ishomogeneous(sig)
 
 # A matrix of 8 channels
-s = signal(1:100, reshape(1:100*8, 100, 8))
-@test length(s) == 8
-@test ishomogeneous(s)
-@test s[1] == [1:100]
-@test_throws BoundsError s[0]
-@test_throws BoundsError s[9]
+sig = signal(1:100, reshape(1:100*8, 100, 8))
+@test length(sig) == 8
+@test ishomogeneous(sig)
+@test sig[1] == [1:100]
+@test_throws BoundsError sig[0]
+@test_throws BoundsError sig[9]
 
 # A signal with heterogeneous channels
-s = signal(1:100, [1:100], [1.:100.]*2, [big(1):100]*4)
-@test length(s) == 3
-@test !ishomogeneous(s)
-@test s[1]*4 == s[2]*2 == s[3] == [1:100]*4
-@test_throws BoundsError s[0]
-@test_throws BoundsError s[4]
+sig = signal(1:100, [1:100], [1.:100.]*2, [big(1):100]*4)
+@test length(sig) == 3
+@test !ishomogeneous(sig)
+@test sig[1]*4 == sig[2]*2 == sig[3] == [1:100]*4
+@test_throws BoundsError sig[0]
+@test_throws BoundsError sig[4]
 
 # A signal with a group of nested signals (like spikes with snippets)
 t1 = (-.2:.025:.8)./1e3
@@ -40,6 +40,6 @@ spikes = signal(cumsum(rand(100)), snips)
 @test_throws ArgumentError signal([1.,2.,2.])
 
 ## Regularization:
-s = signal([0:1/100:2pi], (sin, cos))
-@test !isregular(s)
-@test isregular(regularize(s))
+sig = signal([0:1/100:2pi], (sin, cos))
+@test !isregular(sig)
+@test isregular(regularize(sig))

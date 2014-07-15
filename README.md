@@ -20,7 +20,7 @@ A package specialized for signals that vary over time, where time is measured in
                end
            end
            
-    julia> sig = Signal(0:1/fs:(length(y)-1)/fs, y) # Create a signal object!
+    julia> sig = signal(0:1/fs:(length(y)-1)/fs, y) # Create a signal object!
     Signal with 1 channel over t=0.0 to 60.0, at 40000.0 Hz:
       Each channel has 2400001 datapoints of type Array{Float64,1}
 

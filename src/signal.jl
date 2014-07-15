@@ -7,6 +7,7 @@
 # abstract RegularSignal{N, T, S} <: AbstractSignal{N, T, S}
 
 import SIUnits
+typealias SecondT{T} SIUnits.SIQuantity{T,0,0,1,0,0,0,0}
 
 # A signal has a common timebase (a vector of type T) in seconds, 
 # and a vector of N channels (a number of vectors of type S).
@@ -14,15 +15,23 @@ type Signal{N, T<:AbstractVector, S<:AbstractVector} <: AbstractVector{S}
     time::T
     channels::Vector{S}
 end
+
 # The canonical parametric constructor, with error checking
-function Signal{T<:AbstractVector, S<:AbstractVector}(time::T, channels::Vector{S})
+function Signal{T<:SecondT, S<:AbstractVector}(time::AbstractVector{T}, channels::Vector{S})
     issorted(time,lt=(<=)) || throw(ArgumentError("time vector must be monotonically increasing"))
     for c in channels
         length(time) != length(c) && throw(ArgumentError("each channel must be the same length as time"))
     end
-    eltype(time) <: SIUnits.SIQuantity && @assert(SIUnits.unit(time[1]) === Second)
-    Signal{length(channels), T, S}(time, channels)
+    @assert(eltype(time) <: SecondT, "time must be specified in seconds")
+    Signal{length(channels), typeof(time), S}(time, channels)
 end
+# Convert the time ranges and vectors to Seconds. 
+# TODO: There has got to be a better way! github.com/Keno/SIUnits.jl/issues/25
+Signal{T<:Real, S<:AbstractVector}(time::Range{T}, channels::Vector{S})  = Signal(SIUnits.SIRange{T,0,0,1,0,0,0,0}(time), channels)
+Signal{T<:Real, S<:AbstractVector}(time::Range1{T}, channels::Vector{S}) = Signal(SIUnits.SIRange1{T,0,0,1,0,0,0,0}(time), channels)
+Signal{T<:Real, S<:AbstractVector}(time::Vector{T}, channels::Vector{S}) = Signal(convert(Array{SecondT{T},1}, time), channels)
+Signal{T<:Real, S<:AbstractVector}(time::Vector{SIUnits.SIQuantity{T}}, channels::Vector{S}) = Signal(convert(Array{SecondT{T},1}, time), channels)
+Signal{T<:Real, S<:AbstractVector}(time::AbstractVector{T}, channels::Vector{S}) = throw(ArgumentError("unsupported time vector type"))
 
 # The more user-friendly APIs
 signal(time::AbstractVector, ::()) = Signal(time, [])
@@ -48,7 +57,7 @@ typealias RegularSignal{N, T<:Range, S<:AbstractVector} Signal{N, T, S}
 # Convert to a RegularSignal by blindly shifting time underneath the channels
 # TODO: perhaps I should check the variance of diff(sig.time)?
 regularize(sig::RegularSignal) = sig
-regularize(sig::Signal) = Signal(linrange(sig.time[1],sig.time[end],length(sig.time)), sig.channels)
+regularize(sig::Signal) = Signal(linrange(float(sig.time[1]),float(sig.time[end]),length(sig.time)), sig.channels)
 if !isdefined(Base, :linrange)
     # PR 6627: https://github.com/JuliaLang/julia/pull/6627
     linrange(a::Real,b::Real,len::Integer) = len >= 2 ? range(a, (b-a)/(len-1),len) : len == 1 && a == b ? range(a, zero((b-a)/(len-1)), 1) : error("invalid range length")
