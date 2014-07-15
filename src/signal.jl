@@ -92,5 +92,5 @@ Base.done{N}(sig::Signal{N}, i) = (i > N)
 Base.isempty{N}(sig::Signal{N}) = (N == 0)
 
 # Information about regular signals:
-fs(sig::RegularSignal) = 1/step(sig.time)
-rate(sig::RegularSignal) = step(sig.time)
+samplingfreq(sig::RegularSignal) = 1/step(sig.time)
+samplingrate(sig::RegularSignal) = step(sig.time)

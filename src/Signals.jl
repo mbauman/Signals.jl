@@ -20,8 +20,8 @@ export Signal,
        ishomogeneous,
        channeltypes,
        interp,
-       fs,
-       rate,
+       samplingfreq,
+       samplingrate,
        window
 
 include("signal.jl")

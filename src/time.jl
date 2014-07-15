@@ -65,11 +65,11 @@ function window{N,T<:Range,S<:SecondT}(sig::Signal{N,T}, at::AbstractVector{S}, 
     window(sig, [time2idx(sig, a, :nearest) for a in at], within, channels) 
 end
 function window{N,T<:Range,S,R<:Real}(sig::Signal{N,T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
-    window(sig, at, (iceil(within[1]*fs(sig)), ifloor(within[2]*fs(sig))))
+    window(sig, at, (iceil(within[1]*samplingfreq(sig)), ifloor(within[2]*samplingfreq(sig))))
 end
 function window{N,T<:Range,S,R<:Real}(sig::Signal{N,T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
     r = within[1]:within[2]
-    t = (within[1]/fs(sig)):(1/fs(sig)):(within[2]/fs(sig))
+    t = (within[1]/samplingfreq(sig)):(1/samplingfreq(sig)):(within[2]/samplingfreq(sig))
     
     cs = Array(Signal{length(at),typeof(t),S}, length(channels))
     for (i,c) in enumerate(channels)

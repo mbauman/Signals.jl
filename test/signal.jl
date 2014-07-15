@@ -4,6 +4,8 @@
 sig = signal(1:100)
 @test length(sig) == 0
 @test sig.time == 1s:100s
+@test samplingfreq(sig) == 1/s
+@test samplingrate(sig) == 1s
 @test_throws BoundsError sig[0]
 @test_throws BoundsError sig[1]
 @test ishomogeneous(sig)
@@ -30,6 +32,8 @@ snips = signal(t1, randn(length(t1), 100))
 @test length(snips) == 100
 @test length(snips[1]) == length(snips.time) == length(t1)
 @test isregular(snips) && ishomogeneous(snips)
+@test samplingfreq(snips) == 40_000.0/s
+@test samplingrate(snips) == (2.5e-5)s
 spikes = signal(cumsum(rand(100)), snips)
 @test length(spikes) == 1
 @test spikes[1] === snips
