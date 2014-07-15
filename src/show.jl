@@ -12,10 +12,9 @@ function Base.writemime{N,T,S}(io::IO, m::MIME"text/plain", sig::Signal{N,T,S})
     println(io, ":")
     print(io, "  Each channel has $(length(sig.time)) datapoints")
     if ishomogeneous(sig)
-        print(io, " of type $S")
+        print(io, " of type $(eltype(S))")
     else
-        println(io, " with types:")
-        writemime(io, m, [typeof(c) for c in sig]') # dirty hack to display them
+        println(io, " of types: $(tuple([eltype(c) for c in sig]...))") # dirty hack to display them
     end
 
     show_signal(io, sig)
