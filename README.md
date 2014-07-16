@@ -8,7 +8,7 @@ A package specialized for signals that vary over time, where time is measured in
 
 A `Signal` is a combination of a time vector with any number of channels. It is vector (`<: AbstractVector`) of its channels, and so iteration is done across channels (not along the data within the channels), skipping the time vector.  All channels must themselves be an `AbstractVector`, and they must have the same length as the time vector.
 
-Signals may be either regularly sampled (`RegularSignal`) or discrete, where the step between timepoints is not constant.  Regularly sampled signals are simply Signals whos time vector is a Range.  This allows for some very nice optimizations and saving of space.  Time is always in seconds.
+Signals may be either regularly sampled (`RegularSignal`) or discrete, where the step between timepoints is not constant.  Regularly sampled signals are simply Signals whose time vector is a Range.  This allows for some very nice optimizations and saving of space.  Time is always in seconds.
 
 Since a Signal is itself a vector of channels, `sig1` can be a channel of another Signal `sig2` (if `sig1` has the same number of channels as timepoints in `sig2`).  In this case, the terminology gets a little awkward -- the channels of the nested Signal `sig1` would probably be more appropiately described as repetitions. But this can be very nice way to associate events at specific times with repetitions of a signal.  This can be the first step in averaging signals about a recurring event or building of a peri-stimulus time histogram, or it may simply be used to associate spike snippets with their times.
 
@@ -16,6 +16,7 @@ Since a Signal is itself a vector of channels, `sig1` can be a channel of anothe
 
     julia> Pkg.clone("https://github.com/mbauman/Signals.jl.git")
            Pkg.checkout("SIUnits") # Currently requires the master branch
+           Pkg.checkout("Grid") # Currently requires the master branch
            using Signals
            
     julia> fs = 40000 # Generate a 40kHz noisy signal, with spike-like stuff added for testing
