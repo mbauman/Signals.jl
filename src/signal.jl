@@ -25,13 +25,10 @@ function Signal{T<:SecondT, S<:AbstractVector}(time::AbstractVector{T}, channels
     @assert(eltype(time) <: SecondT, "time must be specified in seconds")
     Signal{length(channels), typeof(time), S}(time, channels)
 end
-# Temporarily required to improve inference until Keno/SIUnits.jl#29 is merged
-Signal{T<:SecondT}(time::AbstractVector{T}, channels::Vector) = signal(time, channels...)
 
 # Convert the time ranges and vectors to Seconds. 
 # TODO: There has got to be a better way! github.com/Keno/SIUnits.jl/issues/25
-Signal{T<:Real, S<:AbstractVector}(time::Range{T}, channels::Vector{S})  = Signal(SIUnits.SIRange{T,0,0,1,0,0,0,0}(time), channels)
-Signal{T<:Real, S<:AbstractVector}(time::Range1{T}, channels::Vector{S}) = Signal(SIUnits.SIRange1{T,0,0,1,0,0,0,0}(time), channels)
+Signal{T<:Real, S<:AbstractVector}(time::Range{T}, channels::Vector{S})  = Signal(SIUnits.SIRange{typeof(time),T,0,0,1,0,0,0,0}(time), channels)
 Signal{T<:Real, S<:AbstractVector}(time::Vector{T}, channels::Vector{S}) = Signal(convert(Array{SecondT{T},1}, time), channels)
 Signal{T<:Real, S<:AbstractVector}(time::Vector{SIUnits.SIQuantity{T}}, channels::Vector{S}) = Signal(convert(Array{SecondT{T},1}, time), channels)
 Signal{T<:Real, S<:AbstractVector}(time::AbstractVector{T}, channels::Vector{S}) = throw(ArgumentError("unsupported time vector type"))
