@@ -16,4 +16,4 @@ script:
   - julia -e 'Pkg.init(); Pkg.clone(pwd()); Pkg.checkout("SIUnits"); Pkg.checkout("Grid")'
   - julia --code-coverage test/runtests.jl
 after_success:
-    - julia -e 'Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+    - julia -e 'cd(Pkg.dir("Signals")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
