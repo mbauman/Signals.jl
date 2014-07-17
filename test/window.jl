@@ -1,7 +1,7 @@
 # Test windowing.
 
 ## Regular Signals:
-for loc in ([20,30,40], [2s,3s,4s]), win in ((-1s,1s), (-10,10))
+for loc in ([20,30,40], [2s,3s,4s], [2.04s,2.95s,4.04s]), win in ((-1s,1s), (-10,10))
     t = 0.1s:0.1s:10.0s
     sig = signal(t, collect(1:100))
     idxs = [20,30,40]
@@ -18,7 +18,7 @@ end
 ## Irregular signals are tougher to test the edge-cases (with 4 different cases)
 # Start with basic behavior like Regular Signals
 
-for loc in ([20,30,40], [2s,3s,4s]), win in ((-1s,1s), (-10,10))
+for loc in ([20,30,40], [2s,3s,4s], [2.04s,2.95s,4.04s]), win in ((-1s,1s), (-10,10))
     t = collect(0.1s:0.1s:10.0s)
     sig = signal(t, collect(1:100))
     idxs = [20,30,40]
