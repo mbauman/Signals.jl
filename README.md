@@ -1,6 +1,6 @@
 # Signals
 
-[![Build Status](https://travis-ci.org/mbauman/Signals.jl.svg?branch=master)](https://travis-ci.org/mbauman/Signals.jl)
+[![Build Status](https://travis-ci.org/mbauman/Signals.jl.svg?branch=master)](https://travis-ci.org/mbauman/Signals.jl) [![Coverage Status](https://img.shields.io/coveralls/mbauman/Signals.jl.svg)](https://coveralls.io/r/mbauman/Signals.jl)
 
 A package specialized for signals that vary over time, where time is measured in seconds.  This is very much a work in progress.  Collaboration is welcome!
 
