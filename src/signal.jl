@@ -1,17 +1,17 @@
 # I'm not sure that these would be useful in dispatch
-# abstract AbstractSignal{N, T<:AbstractVector, S<:AbstractVector} <: AbstractVector{S}
+# abstract AbstractSignal{T<:AbstractVector, S<:AbstractVector} <: AbstractVector{S}
 # What'sig the difference between a discrete and continuous signal? They're all
 # discrete. It'sig just when the signal is based on a Range time type that there'sig
 # special optimizations we can make.
-# abstract DiscreteSignal{N, T, S}   <: AbstractSignal{N, T, S}
-# abstract RegularSignal{N, T, S} <: AbstractSignal{N, T, S}
+# abstract DiscreteSignal{T, S}   <: AbstractSignal{T, S}
+# abstract RegularSignal{T, S} <: AbstractSignal{T, S}
 
 import SIUnits
 typealias SecondT{T} SIUnits.SIQuantity{T,0,0,1,0,0,0,0}
 
 # A signal has a common timebase (a vector of type T) in seconds, 
-# and a vector of N channels (a number of vectors of type S).
-type Signal{N, T<:AbstractVector, S<:AbstractVector} <: AbstractVector{S}
+# and a vector of channels (a number of vectors of type S).
+type Signal{T<:AbstractVector, S<:AbstractVector} <: AbstractVector{S}
     time::T
     channels::Vector{S}
 end
@@ -23,7 +23,7 @@ function Signal{T<:SecondT, S<:AbstractVector}(time::AbstractVector{T}, channels
         length(time) != length(c) && throw(ArgumentError("each channel must be the same length as time"))
     end
     @assert(eltype(time) <: SecondT, "time must be specified in seconds")
-    Signal{length(channels), typeof(time), S}(time, channels)
+    Signal{typeof(time), S}(time, channels)
 end
 
 # Convert the time ranges and vectors to Seconds. 
@@ -44,7 +44,7 @@ signal(time::AbstractVector, data::AbstractMatrix) = Signal(time, [view(data, :,
 signal(time::AbstractVector, fcns::(Function...)) = signal(time, map(f->f(time), fcns))
 
 # An evenly sampled signal. Allows for optimizations and saves storage space
-typealias RegularSignal{N, T<:Range, S<:AbstractVector} Signal{N, T, S}
+typealias RegularSignal{T<:Range, S<:AbstractVector} Signal{T, S}
 # Not sure about the naming here. I want to describe an evenly sampled signal,
 # with functions to test (is*) and convert/ensure the signal is* (make*?)
 # RegularSignal: nice verb (regularize); Grid.jl uses Irregular for the opposite
@@ -67,17 +67,17 @@ isregular(::Signal) = false
 isregular(::RegularSignal) = true
 
 # Test if the channels are all of the same type
-ishomogeneous{N,T,S}(::Signal{N,T,S}) = isleaftype(S) || S === None
+ishomogeneous{T,S}(::Signal{T,S}) = isleaftype(S) || S === None
 # Return an array of the type of each channel
 channeltypes(sig::Signal) = Type[typeof(c) for c in sig]
 
 ## Index and iterate over the signal columns of .channels
-Base.length{N}(::Signal{N}) = N
-Base.size{N}(::Signal{N}) = (N,)
-Base.size{N}(::Signal{N}, I::Int) = I==1 ? N : I>1 ? 1 : throw(BoundsError())
+Base.length(sig::Signal) = length(sig.channels)
+Base.size(sig::Signal) = (length(sig),)
+Base.size(sig::Signal, I::Int) = I==1 ? length(sig) : I>1 ? 1 : throw(BoundsError())
 Base.ndims(::Signal) = 1
 Base.elsize(sig::Signal) = (length(sig.time),)
-Base.eltype{N,T,S}(::Signal{N,T,S}) = S
+Base.eltype{T,S}(::Signal{T,S}) = S
 
 # TODO: Perhaps allow custom names/indexes like DataFrames?
 Base.getindex(sig::Signal, idx::Real=1) = sig.channels[idx]
@@ -88,8 +88,8 @@ view(sig::Signal, idx::Range)  = view(sig.channels, idx)
 # Iteration
 Base.start(::Signal) = 1
 Base.next(sig::Signal, i) = (sig.channels[i], i+1)
-Base.done{N}(sig::Signal{N}, i) = (i > N)
-Base.isempty{N}(sig::Signal{N}) = (N == 0)
+Base.done(sig::Signal, i) = (i > length(sig))
+Base.isempty(sig::Signal) = (length(sig) == 0)
 
 # Information about regular signals:
 samplingfreq(sig::RegularSignal) = 1/step(sig.time)

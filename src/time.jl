@@ -57,21 +57,21 @@ chanswithin(sig::Signal, i1::Real, i2::Real)       = [c[i1:i2] for c in sig]
 # each with a timebase of the window size and length(at) repetitions
 # Window defaults to windowing all channels
 # convert seconds to relative indices ahead of time for regular signals
-function window{N,T<:Range,S<:SecondT}(sig::Signal{N,T}, at::AbstractVector{S}, within::(Real, Real), channels=1:length(sig))
+function window{T<:Range,S<:SecondT}(sig::Signal{T}, at::AbstractVector{S}, within::(Real, Real), channels=1:length(sig))
     window(sig, [time2idx(sig, a, :nearest) for a in at], within, channels)
 end
 # Can't use a Union(SecondT, Real) due to ambiguity
-function window{N,T<:Range,S<:SecondT}(sig::Signal{N,T}, at::AbstractVector{S}, within::(SecondT, SecondT), channels=1:length(sig))
+function window{T<:Range,S<:SecondT}(sig::Signal{T}, at::AbstractVector{S}, within::(SecondT, SecondT), channels=1:length(sig))
     window(sig, [time2idx(sig, a, :nearest) for a in at], within, channels) 
 end
-function window{N,T<:Range,S,R<:Real}(sig::Signal{N,T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
+function window{T<:Range,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
     window(sig, at, (iceil(within[1]*samplingfreq(sig)), ifloor(within[2]*samplingfreq(sig))))
 end
-function window{N,T<:Range,S,R<:Real}(sig::Signal{N,T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
+function window{T<:Range,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
     r = within[1]:within[2]
     t = (within[1]/samplingfreq(sig)):(1/samplingfreq(sig)):(within[2]/samplingfreq(sig))
     
-    cs = Array(Signal{length(at),typeof(t),S}, length(channels))
+    cs = Array(Signal{typeof(t),S}, length(channels))
     for (i,c) in enumerate(channels)
         cs[i] = Signal(t, [sig[c][a+r] for a in at])
     end
@@ -82,27 +82,27 @@ end
 # common time-base. Therefore, it returns an array of signals. Furthermore,
 # specifying indices vs. time can behave very differently. This is much more
 # difficult, with four different cases:
-function window{N,T,S,R<:SecondT}(sig::Signal{N,T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
+function window{T,S,R<:SecondT}(sig::Signal{T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
     # Set number of indexes within each window, about time
     r1, r2 = within
     r = r1:r2
     cs = Signal[(i = time2idx(sig, t, :nearest); Signal(sig.time[i+r] - t, chanswithin(sig,i+r1,i+r2))) for t in at]
     signal(at, cs)
 end
-function window{N,T,S,R<:Real}(sig::Signal{N,T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
+function window{T,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
     # Set number of indexes within each window, about indices
     r1, r2 = within
     r = r1:r2
     cs = Signal[Signal(sig.time[i+r] - sig.time[i], chanswithin(sig,i+r1, i+r2)) for i in at]
     signal(sig.time[at], cs)
 end
-function window{N,T,S,R<:SecondT}(sig::Signal{N,T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
+function window{T,S,R<:SecondT}(sig::Signal{T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
     # Time windows, about times
     t1, t2 = within
     cs = Signal[Signal(timewithin(sig, t+t1, t+t2)-t, chanswithin(sig, t+t1, t+t2)) for t in at]
     signal(at, cs)
 end
-function window{N,T,S,R<:Real}(sig::Signal{N,T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
+function window{T,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
     # time windows, about indices
     t1, t2 = within
     cs = Signal[(t = idx2time(sig,i); Signal(timewithin(sig, t+t1, t+t2)-t, chanswithin(sig, t+t1,t+t2))) for i in at]

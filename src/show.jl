@@ -1,14 +1,14 @@
 
-Base.summary{N}(sig::Signal{N}) = "$(typeof(sig).name) with $N channel$(N==1?"":"s") over t=$(sig.time[1]) to $(sig.time[end])"
+Base.summary(sig::Signal) = "$(typeof(sig).name) with $(length(sig)) channel$(length(sig)==1?"":"s") over t=$(sig.time[1]) to $(sig.time[end])"
 
 # Show the sampling rate if we know it
 function Base.summary(sig::RegularSignal)
     string(invoke(summary, (Signal,), sig), ", at $(round(1/step(sig.time),1)) Hz")
 end
 
-function Base.writemime{N,T,S}(io::IO, m::MIME"text/plain", sig::Signal{N,T,S})
+function Base.writemime{T,S}(io::IO, m::MIME"text/plain", sig::Signal{T,S})
     print(io, summary(sig))
-    N == 0 && return
+    length(sig) == 0 && return
     println(io, ":")
     print(io, "  Each channel has $(length(sig.time)) datapoints")
     if ishomogeneous(sig)
@@ -20,8 +20,10 @@ function Base.writemime{N,T,S}(io::IO, m::MIME"text/plain", sig::Signal{N,T,S})
     show_signal(io, sig)
 end
 
-# Only one channel of nested Signals. Display this nicely with a Sparkline
-function show_signal{T<:AbstractVector,S<:Signal}(io::IO, sig::Signal{1, T, S}, limit_output::Bool=true)
+# Channels of nested Signals. Display this nicely with a Sparkline
+function show_signal{T<:AbstractVector,S<:Signal}(io::IO, sig::Signal{T, S}, limit_output::Bool=true)
+    length(sig) > 1 && return # TODO: display multiple signals?
+    
     # Determine screen size
     rows, cols = limit_output ? Base.tty_size() : (typemax(Int), typemax(Int))
     rows = min(rows-5, length(sig.time))

@@ -4,8 +4,8 @@ import Grid
 import ArrayViews: ArrayView
 
 # Can't parameterize RegularSignal due to typealias issues (#7453: #2552, #6721)
-function Grid.interp{N,T<:Range,S<:SecondT}(sig::Signal{N,T}, ti::AbstractVector{S})
-    # Using a Regular Grid is a little awkward, but more performant; it assumes the original basis is 1:N
+function Grid.interp{T<:Range,S<:SecondT}(sig::Signal{T}, ti::AbstractVector{S})
+    # Using a Regular Grid is a little awkward, but more performant; it assumes the original basis is 1:length(sig)
     t = sig.time
     # So convert ti to "indices" relative to sig.time
     # TODO: SIUnits thinks that the vectorized (ti-t[1])/step(t) is in seconds. https://github.com/Keno/SIUnits.jl/issues/27
@@ -16,7 +16,7 @@ function Grid.interp{N,T<:Range,S<:SecondT}(sig::Signal{N,T}, ti::AbstractVector
     Signal(ti, vi)
 end
 
-function Grid.interp{N,T,S<:SecondT}(sig::Signal{N,T}, ti::AbstractVector{S})
+function Grid.interp{T,S<:SecondT}(sig::Signal{T}, ti::AbstractVector{S})
     vi = [Grid.InterpIrregular(sig.time, float(c), Grid.BCnan, Grid.InterpLinear)[ti] for c in sig]
     Signal(ti, vi)
 end
