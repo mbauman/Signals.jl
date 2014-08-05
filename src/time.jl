@@ -36,20 +36,24 @@ function within(sig::Signal, i1::Real, i2::Real) # The real (and only) workhorse
 end
 
 # Private API (TODO: Generate these helper functions via metaprogramming?)
-timebefore(sig::Signal, t::SecondT) = timebefore(sig, time2idx(sig, t, :previous))
-timebefore(sig::Signal, i::Real)    = timewithin(sig, 1, i)
-timeafter(sig::Signal, t::SecondT)  = timeafter(sig, time2idx(sig, t, :next))
-timeafter(sig::Signal, i::Real)     = timewithin(sig, i, length(sig.time))
-timewithin(sig::Signal, i::(Real, Real))          = timewithin(sig, t[1], t[2])
-timewithin(sig::Signal, t::(SecondT, SecondT))    = timewithin(sig, time2idx(sig, t[1], :next), time2idx(sig, t[2], :previous))
+timebefore(sig::Signal, t::SecondT)               = timebefore(sig, time2idx(sig, t, :previous))
+timebefore(sig::Signal, i::Real)                  = timewithin(sig, 1, i)
+timeafter(sig::Signal,  t::SecondT)               = timeafter(sig, time2idx(sig, t, :next))
+timeafter(sig::Signal,  i::Real)                  = timewithin(sig, i, length(sig.time))
 timewithin(sig::Signal, t1::SecondT, t2::SecondT) = timewithin(sig, time2idx(sig, t1,   :next), time2idx(sig, t2,   :previous))
 timewithin(sig::Signal, i1::Real, i2::Real)       = sig.time[i1:i2]
-chansbefore(sig::Signal, t::SecondT) = chansbefore(sig, time2idx(sig, t, :previous))
-chansbefore(sig::Signal, i::Real)    = chanswithin(sig, 1, i)
-chansafter(sig::Signal, t::SecondT)  = chansafter(sig, time2idx(sig, t, :next))
-chansafter(sig::Signal, i::Real)     = chanswithin(sig, i, length(sig.time))
-chanswithin(sig::Signal, i::(Real, Real))          = chanswithin(sig, t[1], t[2])
-chanswithin(sig::Signal, t::(SecondT, SecondT))    = chanswithin(sig, time2idx(sig, t[1], :next), time2idx(sig, t[2], :previous))
+
+chanbefore(sig::Signal, idx, t::SecondT)               = chanbefore(sig, idx, time2idx(sig, t, :previous))
+chanbefore(sig::Signal, idx, i::Real)                  = chanwithin(sig, idx, 1, i)
+chanafter(sig::Signal,  idx, t::SecondT)               = chanafter(sig,  idx, time2idx(sig, t, :next))
+chanafter(sig::Signal,  idx, i::Real)                  = chanwithin(sig, idx, i, length(sig.time))
+chanwithin(sig::Signal, idx, t1::SecondT, t2::SecondT) = chanwithin(sig, idx, time2idx(sig, t1,   :next), time2idx(sig, t2,   :previous))
+chanwithin(sig::Signal, idx, i1::Real, i2::Real)       = sig[idx][i1:i2]
+
+chansbefore(sig::Signal, t::SecondT)               = chansbefore(sig, time2idx(sig, t, :previous))
+chansbefore(sig::Signal, i::Real)                  = chanswithin(sig, 1, i)
+chansafter(sig::Signal,  t::SecondT)               = chansafter(sig, time2idx(sig, t, :next))
+chansafter(sig::Signal,  i::Real)                  = chanswithin(sig, i, length(sig.time))
 chanswithin(sig::Signal, t1::SecondT, t2::SecondT) = chanswithin(sig, time2idx(sig, t1,   :next), time2idx(sig, t2,   :previous))
 chanswithin(sig::Signal, i1::Real, i2::Real)       = [c[i1:i2] for c in sig]
 
@@ -57,6 +61,19 @@ chanswithin(sig::Signal, i1::Real, i2::Real)       = [c[i1:i2] for c in sig]
 # each with a timebase of the window size and length(at) repetitions
 # Window defaults to windowing all channels
 # convert seconds to relative indices ahead of time for regular signals
+
+# Note that, given locations in times that are not exactly on a sample point,
+# this *snaps* the time vector of the resulting Signal to the nearest sample.
+# Were this not done, there are two things that become problematic:
+#  1. Fencepost problems: If the window is exactly `m` multiples of the sampling
+#     rate (or is specified in indices), the result of windowing may have m or
+#     m+1 samples depending on the event location (m+1 when exactly on a sample
+#     point, m otherwise). This would be very difficult to handle downstream.
+#  2. We could no longer combine multiple repetitions into one Signal object as
+#     the times of each repetition would vary by as much as ±0.5dt. The only
+#     sensible way to combine such signals is to upsample them all to a common
+#     timebase. This is something that the user could do ahead of time if they
+#     are concerned about jitter on the scale of ±0.5dt.
 function window{T<:Range,S<:SecondT}(sig::Signal{T}, at::AbstractVector{S}, within::(Real, Real), channels=1:length(sig))
     window(sig, [time2idx(sig, a, :nearest) for a in at], within, channels)
 end
@@ -70,41 +87,40 @@ end
 function window{T<:Range,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
     r = within[1]:within[2]
     t = (within[1]/samplingfreq(sig)):(1/samplingfreq(sig)):(within[2]/samplingfreq(sig))
-    
-    cs = Array(Signal{typeof(t),S}, length(channels))
-    for (i,c) in enumerate(channels)
-        cs[i] = Signal(t, [sig[c][a+r] for a in at])
-    end
-    Signal(sig.time[at], cs)
+    # seems to be typed properly, but perhaps the combination is too complicated
+    cs = [Signal(t, [sig[c][a+r] for a in at]) for c in channels]
+    signal(sig.time[at], cs...) # so just splat to improve inference
 end
 
 # Windowing an irregular signal cannot aggregate the Signals together into a
-# common time-base. Therefore, it returns an array of signals. Furthermore,
-# specifying indices vs. time can behave very differently. This is much more
-# difficult, with four different cases:
+# common time-base across all the repetitions. We could aggregate *channels*
+# together within each repetition, but that is the effective transpose of what
+# we need. Furthermore, specifying indices vs. time can behave very differently
+# because we don't snap to the nearest sample like RegularSignals. So there are
+# four different cases, each constructing a matrix of one-channel Signals:
 function window{T,S,R<:SecondT}(sig::Signal{T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
     # Set number of indexes within each window, about time
     r1, r2 = within
     r = r1:r2
-    cs = Signal[(i = time2idx(sig, t, :nearest); Signal(sig.time[i+r] - t, chanswithin(sig,i+r1,i+r2))) for t in at]
+    cs = [(i = time2idx(sig, t, :nearest); signal(sig.time[i+r] - t, sig[c][i+r])) for t in at, c in channels]
     signal(at, cs)
 end
 function window{T,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
     # Set number of indexes within each window, about indices
     r1, r2 = within
     r = r1:r2
-    cs = Signal[Signal(sig.time[i+r] - sig.time[i], chanswithin(sig,i+r1, i+r2)) for i in at]
+    cs = [signal(sig.time[i+r] - sig.time[i], sig[c][i+r]) for i in at, c in channels]
     signal(sig.time[at], cs)
 end
 function window{T,S,R<:SecondT}(sig::Signal{T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
     # Time windows, about times
     t1, t2 = within
-    cs = Signal[Signal(timewithin(sig, t+t1, t+t2)-t, chanswithin(sig, t+t1, t+t2)) for t in at]
+    cs = [signal(timewithin(sig, t+t1, t+t2)-t, chanwithin(sig, c, t+t1, t+t2)) for t in at, c in channels]
     signal(at, cs)
 end
 function window{T,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
     # time windows, about indices
     t1, t2 = within
-    cs = Signal[(t = idx2time(sig,i); Signal(timewithin(sig, t+t1, t+t2)-t, chanswithin(sig, t+t1,t+t2))) for i in at]
+    cs = [(t = idx2time(sig,i); signal(timewithin(sig, t+t1, t+t2)-t, chanwithin(sig, c, t+t1, t+t2))) for i in at, c in channels]
     signal(sig.time[at], cs)
 end

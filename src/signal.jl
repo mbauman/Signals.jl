@@ -39,7 +39,7 @@ signal(time::AbstractVector, channels::(AbstractVector...)) = Signal(time, [c fo
 signal(time::AbstractVector, channels::AbstractVector...) = signal(time, channels)
 # Matrices are assumed to be grouped signals. If you want multiple datapoints
 # per timepoint within one channel (which is uncommon), use a vector of vectors.
-signal(time::AbstractVector, data::AbstractMatrix) = Signal(time, [view(data, :, i) for i in 1:size(data,2)])
+signal(time::AbstractVector, data::AbstractMatrix) = Signal(time, [data[:, i] for i in 1:size(data,2)])
 # For simple testing, allow vectorized functions
 signal(time::AbstractVector, fcns::(Function...)) = signal(time, map(f->f(time), fcns))
 
@@ -82,6 +82,7 @@ Base.eltype{T,S}(::Signal{T,S}) = S
 # TODO: Perhaps allow custom names/indexes like DataFrames?
 Base.getindex(sig::Signal, idx::Real=1) = sig.channels[idx]
 Base.getindex(sig::Signal, idx::Range)  = sig.channels[idx]
+Base.getindex{T<:AbstractVector}(sig::Signal, idx::T) = sig.channels[idx]
 view(sig::Signal, idx::Real=1) = view(sig.channels, idx)
 view(sig::Signal, idx::Range)  = view(sig.channels, idx)
 
