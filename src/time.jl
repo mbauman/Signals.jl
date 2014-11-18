@@ -3,30 +3,30 @@
 # TODO: Perhaps use singleton types for the mode if this becomes a hotspot
 time2idx(sig::Signal, t::Real, mode::Symbol=:exact) = time2idx(sig, t*s, mode)  # Should this be allowed?
 function time2idx(sig::Signal, t::SecondT, mode::Symbol=:exact)
-    sig.time[1] <= t <= sig.time[end] || throw(BoundsError())
+    ts = time(sig)
+    ts[1] <= t <= ts[end] || throw(BoundsError())
     if mode == :exact
-        r = searchsorted(sig.time, t)
+        r = searchsorted(ts, t)
         isempty(r) && throw(InexactError())
         return r[1]
     elseif mode == :previous
-        return searchsortedlast(sig.time, t)
+        return searchsortedlast(ts, t)
     elseif mode == :next
-        return searchsortedfirst(sig.time, t)
+        return searchsortedfirst(ts, t)
     elseif mode == :nearest
-        i = searchsortedlast(sig.time, t)
-        return t - sig.time[i] > sig.time[i+1] - t ? i+1 : i
+        i = searchsortedlast(ts, t)
+        return t - ts[i] > ts[i+1] - t ? i+1 : i
     else
         error("unknown time2idx conversion mode")
     end
 end
-idx2time(sig::Signal, i) = sig.time[i]
 
 # Time restriction
 before(sig::Signal, t::SecondT) = before(sig, time2idx(sig, t, :previous))
 before(sig::Signal, i::Real)    = within(sig, 1, i)
 
 after(sig::Signal, t::SecondT) = after(sig, time2idx(sig, t, :next))
-after(sig::Signal, i::Real)    = within(sig, i, length(sig.time))
+after(sig::Signal, i::Real)    = within(sig, i, length(time(sig)))
 
 within(sig::Signal, i::(Real, Real))          = within(sig, t[1], t[2])
 within(sig::Signal, t::(SecondT, SecondT))    = within(sig, time2idx(sig, t[1], :next), time2idx(sig, t[2], :previous))
@@ -39,21 +39,21 @@ end
 timebefore(sig::Signal, t::SecondT)               = timebefore(sig, time2idx(sig, t, :previous))
 timebefore(sig::Signal, i::Real)                  = timewithin(sig, 1, i)
 timeafter(sig::Signal,  t::SecondT)               = timeafter(sig, time2idx(sig, t, :next))
-timeafter(sig::Signal,  i::Real)                  = timewithin(sig, i, length(sig.time))
+timeafter(sig::Signal,  i::Real)                  = timewithin(sig, i, length(time(sig)))
 timewithin(sig::Signal, t1::SecondT, t2::SecondT) = timewithin(sig, time2idx(sig, t1,   :next), time2idx(sig, t2,   :previous))
-timewithin(sig::Signal, i1::Real, i2::Real)       = sig.time[i1:i2]
+timewithin(sig::Signal, i1::Real, i2::Real)       = time(sig, i1:i2)
 
 chanbefore(sig::Signal, idx, t::SecondT)               = chanbefore(sig, idx, time2idx(sig, t, :previous))
 chanbefore(sig::Signal, idx, i::Real)                  = chanwithin(sig, idx, 1, i)
 chanafter(sig::Signal,  idx, t::SecondT)               = chanafter(sig,  idx, time2idx(sig, t, :next))
-chanafter(sig::Signal,  idx, i::Real)                  = chanwithin(sig, idx, i, length(sig.time))
+chanafter(sig::Signal,  idx, i::Real)                  = chanwithin(sig, idx, i, length(time(sig)))
 chanwithin(sig::Signal, idx, t1::SecondT, t2::SecondT) = chanwithin(sig, idx, time2idx(sig, t1,   :next), time2idx(sig, t2,   :previous))
 chanwithin(sig::Signal, idx, i1::Real, i2::Real)       = sig[idx][i1:i2]
 
 chansbefore(sig::Signal, t::SecondT)               = chansbefore(sig, time2idx(sig, t, :previous))
 chansbefore(sig::Signal, i::Real)                  = chanswithin(sig, 1, i)
 chansafter(sig::Signal,  t::SecondT)               = chansafter(sig, time2idx(sig, t, :next))
-chansafter(sig::Signal,  i::Real)                  = chanswithin(sig, i, length(sig.time))
+chansafter(sig::Signal,  i::Real)                  = chanswithin(sig, i, length(time(sig)))
 chanswithin(sig::Signal, t1::SecondT, t2::SecondT) = chanswithin(sig, time2idx(sig, t1,   :next), time2idx(sig, t2,   :previous))
 chanswithin(sig::Signal, i1::Real, i2::Real)       = [c[i1:i2] for c in sig]
 
@@ -74,22 +74,22 @@ chanswithin(sig::Signal, i1::Real, i2::Real)       = [c[i1:i2] for c in sig]
 #     sensible way to combine such signals is to upsample them all to a common
 #     timebase. This is something that the user could do ahead of time if they
 #     are concerned about jitter on the scale of ±0.5dt.
-function window{T<:Range,S<:SecondT}(sig::Signal{T}, at::AbstractVector{S}, within::(Real, Real), channels=1:length(sig))
-    window(sig, [time2idx(sig, a, :nearest) for a in at], within, channels)
+function window{S<:SecondT}(sig::RegularSignal, at::AbstractVector{S}, within::(Real, Real))
+    window(sig, [time2idx(sig, a, :nearest) for a in at], within)
 end
-# Can't use a Union(SecondT, Real) due to ambiguity
-function window{T<:Range,S<:SecondT}(sig::Signal{T}, at::AbstractVector{S}, within::(SecondT, SecondT), channels=1:length(sig))
-    window(sig, [time2idx(sig, a, :nearest) for a in at], within, channels) 
+# Can't use within::(Union(SecondT,Real), Union(SecondT,Real)) due to ambiguity
+function window{S<:SecondT}(sig::RegularSignal, at::AbstractVector{S}, within::(SecondT, SecondT))
+    window(sig, [time2idx(sig, a, :nearest) for a in at], within) 
 end
-function window{T<:Range,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
+function window{R<:Real}(sig::RegularSignal, at::AbstractVector{R}, within::(SecondT, SecondT))
     window(sig, at, (iceil(within[1]*samplingfreq(sig)), ifloor(within[2]*samplingfreq(sig))))
 end
-function window{T<:Range,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
+function window{R<:Real,R2<:Real}(sig::RegularSignal, at::AbstractVector{R}, within::(R2, R2))
     r = within[1]:within[2]
-    t = (within[1]/samplingfreq(sig)):(1/samplingfreq(sig)):(within[2]/samplingfreq(sig))
-    # seems to be typed properly, but perhaps the combination is too complicated
-    cs = [Signal(t, [sig[c][a+r] for a in at]) for c in channels]
-    signal(sig.time[at], cs...) # so just splat to improve inference
+    dt = float(samplingrate(sig)) # TODO: Math with SIUnits is very annoying.
+    t = (within[1]*dt):dt:(within[2]*dt)
+    cs = [VectorSignal(t, [c[a+r] for a in at]) for c in sig]
+    VectorSignal(time(sig, at), cs)
 end
 
 # Windowing an irregular signal cannot aggregate the Signals together into a
@@ -98,29 +98,29 @@ end
 # we need. Furthermore, specifying indices vs. time can behave very differently
 # because we don't snap to the nearest sample like RegularSignals. So there are
 # four different cases, each constructing a matrix of one-channel Signals:
-function window{T,S,R<:SecondT}(sig::Signal{T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
+function window{S<:SecondT}(sig::Signal, at::AbstractVector{S}, within::(Real, Real))
     # Set number of indexes within each window, about time
     r1, r2 = within
     r = r1:r2
-    cs = [(i = time2idx(sig, t, :nearest); signal(sig.time[i+r] - t, sig[c][i+r])) for t in at, c in channels]
+    cs = [(i = time2idx(sig, t, :nearest); signal(time(sig, i+r) - t, c[i+r])) for t in at, c in sig]
     signal(at, cs)
 end
-function window{T,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(Real, Real), channels=1:length(sig))
+function window{R<:Real}(sig::Signal, at::AbstractVector{R}, within::(Real, Real))
     # Set number of indexes within each window, about indices
     r1, r2 = within
     r = r1:r2
-    cs = [signal(sig.time[i+r] - sig.time[i], sig[c][i+r]) for i in at, c in channels]
-    signal(sig.time[at], cs)
+    cs = [signal(time(sig, i+r) - time(sig, i), c[i+r]) for i in at, c in sig]
+    signal(time(sig, at), cs)
 end
-function window{T,S,R<:SecondT}(sig::Signal{T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
+function window{S<:SecondT}(sig::Signal, at::AbstractVector{S}, within::(SecondT, SecondT))
     # Time windows, about times
     t1, t2 = within
-    cs = [signal(timewithin(sig, t+t1, t+t2)-t, chanwithin(sig, c, t+t1, t+t2)) for t in at, c in channels]
+    cs = [signal(timewithin(sig, t+t1, t+t2)-t, chanwithin(sig, c, t+t1, t+t2)) for t in at, c in 1:length(sig)]
     signal(at, cs)
 end
-function window{T,S,R<:Real}(sig::Signal{T,S}, at::AbstractVector{R}, within::(SecondT, SecondT), channels=1:length(sig))
+function window{R<:Real}(sig::Signal, at::AbstractVector{R}, within::(SecondT, SecondT))
     # time windows, about indices
     t1, t2 = within
-    cs = [(t = idx2time(sig,i); signal(timewithin(sig, t+t1, t+t2)-t, chanwithin(sig, c, t+t1, t+t2))) for i in at, c in channels]
-    signal(sig.time[at], cs)
+    cs = [(t = time(sig, i); signal(timewithin(sig, t+t1, t+t2)-t, chanwithin(sig, c, t+t1, t+t2))) for i in at, c in 1:length(sig)]
+    signal(time(sig, at), cs)
 end

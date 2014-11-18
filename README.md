@@ -6,7 +6,7 @@ A package specialized for signals that vary over time, where time is measured in
 
 ## Design
 
-A `Signal` is a combination of a time vector with any number of channels. It is vector (`<: AbstractVector`) of its channels, and so iteration is done across channels (not along the data within the channels), skipping the time vector.  All channels must themselves be an `AbstractVector`, and they must have the same length as the time vector.
+A `Signal` is a combination of a time vector with any number of data channels. It is vector (`<: AbstractVector`) of its channels, and so iteration is done across channels (not along the data within the channels), skipping the time vector.  All channels must themselves be an `AbstractVector`, and they must have the same length as the time vector.
 
 Signals may be either regularly sampled (`RegularSignal`) or discrete, where the step between timepoints is not constant.  Regularly sampled signals are simply Signals whose time vector is a Range.  This allows for some very nice optimizations and saving of space.  Time is always in seconds.
 

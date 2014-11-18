@@ -1,16 +1,16 @@
 
-Base.summary(sig::Signal) = "$(typeof(sig).name) with $(length(sig)) channel$(length(sig)==1?"":"s") over t=$(sig.time[1]) to $(sig.time[end])"
+Base.summary(sig::Signal) = "$(typeof(sig).name) with $(length(sig)) channel$(length(sig)==1?"":"s") over t=$(time(sig)[1]) to $(time(sig)[end])"
 
 # Show the sampling rate if we know it
 function Base.summary(sig::RegularSignal)
-    string(invoke(summary, (Signal,), sig), ", at $(round(1/step(sig.time),1)) Hz")
+    string(invoke(summary, (Signal,), sig), ", at $(samplingfreq(sig))")
 end
 
 function Base.writemime{T,S}(io::IO, m::MIME"text/plain", sig::Signal{T,S})
     print(io, summary(sig))
     length(sig) == 0 && return
     println(io, ":")
-    print(io, "  Each channel has $(length(sig.time)) datapoints")
+    print(io, "  Each channel has $(length(time(sig))) datapoints")
     if ishomogeneous(sig)
         print(io, " of type $(eltype(S))")
     else
@@ -26,12 +26,12 @@ function show_signal{T<:AbstractVector,S<:Signal}(io::IO, sig::Signal{T, S}, lim
     
     # Determine screen size
     rows, cols = limit_output ? Base.tty_size() : (typemax(Int), typemax(Int))
-    rows = min(rows-5, length(sig.time))
+    rows = min(rows-5, length(time(sig)))
 
     # Gather the times
     ts = Array(ByteString, rows)
     for i=1:min(length(ts), rows)
-        ts[i] = string(sig.time[i], ": ")
+        ts[i] = string(time(sig, i), ": ")
     end
     twidth = maximum([strwidth(t) for t in ts]) + 2
 
@@ -41,7 +41,7 @@ function show_signal{T<:AbstractVector,S<:Signal}(io::IO, sig::Signal{T, S}, lim
         println(io)
         print(io, lpad(ts[i], twidth))
         if length(sig[i]) > cols - twidth
-            spark(io, view(sig[i], 1:(cols - twidth - 2)))
+            spark(io, sig[i][1:(cols - twidth - 2)])
             print(io, " …")
         else
             spark(io, sig[i])
@@ -49,7 +49,7 @@ function show_signal{T<:AbstractVector,S<:Signal}(io::IO, sig::Signal{T, S}, lim
     end
 
     # And display a continuation mark if we have more data
-    if rows < length(sig.time)
+    if rows < length(time(sig))
         println(io)
         print(io, "  ⋮", lpad(": ", twidth-3), "⋮")
     end
