@@ -44,7 +44,7 @@ VectorSignal{T<:Real, S<:AbstractVector}(time::Vector{SIUnits.SIQuantity{T}}, ch
 VectorSignal{T<:Real, S<:AbstractVector}(time::AbstractVector{T}, channels::Vector{S}) = throw(ArgumentError("unsupported time vector type"))
 
 # The more user-friendly APIs that implicitly create VectorSignals
-signal(time::AbstractVector, ::()) = VectorSignal(time, [])
+signal(time::AbstractVector, ::()) = VectorSignal(time, Array{None,1}[])
 signal(time::AbstractVector, channels::(AbstractVector...)) = VectorSignal(time, [c for c in channels])
 signal(time::AbstractVector, channels::AbstractVector...) = signal(time, channels)
 # Matrices are assumed to be grouped signals. If you want multiple datapoints
