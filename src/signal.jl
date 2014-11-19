@@ -12,10 +12,14 @@ abstract RegularSignal{T<:Range, S} <: Signal{T, S}
 type VectorSignal{T, S} <: Signal{T, S}
     time::T
     channels::Vector{S}
+
+    VectorSignal(t,c) = (_checkargs(t,c); new(t,c))
 end
 type RegularVectorSignal{T, S} <: RegularSignal{T, S}
     time::T
     channels::Vector{S}
+
+    RegularVectorSignal(t,c) = (_checkargs(t,c); new(t,c))
 end
 typealias AnyVectorSignal{T,S} Union(VectorSignal{T,S}, RegularVectorSignal{T,S})
 
@@ -27,28 +31,28 @@ function _checkargs(t, v::Vector)
     eltype(t) <: SecondT || throw(ArgumentError("time must be specified in seconds"))
 end
 # The canonical constructor for both VectorSignals and RegularVectorSignals
-function VectorSignal{T<:SecondT, S<:AbstractVector}(time::Range{T}, channels::Vector{S})
-    _checkargs(time, channels)
-    RegularVectorSignal{typeof(time), S}(time, channels)
-end
-function VectorSignal{T<:SecondT, S<:AbstractVector}(time::AbstractVector{T}, channels::Vector{S})
-    _checkargs(time, channels)
+VectorSignal{T<:SecondT, S<:AbstractVector}(time::Range{T}, channels::Vector{S}) =
+    RegularVectorSignal{typeof(time), S}(time, channels) # TODO: is this ok? The VectorSignal constructor can return a type that's not VectorSignal!
+VectorSignal{T<:SecondT, S<:AbstractVector}(time::AbstractVector{T}, channels::Vector{S}) =
     VectorSignal{typeof(time), S}(time, channels)
-end
+
+# The lowercase s-signal is more forgiving than the strictly-typed constructors.
+# It will automatically convert time vectors into seconds (is this a good idea?)
+# and since inference can get messy with vectors of vectors (especially at the
+# REPL prompt) it takes a varargs list or tuple of the channel vectors.
+signal(time::AbstractVector, channels::(AbstractVector...)) = VectorSignal(inseconds(time), [c for c in channels])
+signal(time::AbstractVector, channels...) = signal(time, channels)
+signal(time::AbstractVector, ::()) = VectorSignal(inseconds(time), Array{None,1}[])
+# For simple testing, allow vectorized functions
+signal(time::AbstractVector, fcns::(Function...)) = signal(time, map(f->f(time), fcns))
 
 # Convert the time ranges and vectors to Seconds. 
 # TODO: There has got to be a better way! github.com/Keno/SIUnits.jl/issues/25
-VectorSignal{T<:Real, S<:AbstractVector}(time::Range{T}, channels::Vector{S})  = VectorSignal(SIUnits.SIRange{typeof(time),T,0,0,1,0,0,0,0}(time), channels)
-VectorSignal{T<:Real, S<:AbstractVector}(time::Vector{T}, channels::Vector{S}) = VectorSignal(convert(Array{SecondT{T},1}, time), channels)
-VectorSignal{T<:Real, S<:AbstractVector}(time::Vector{SIUnits.SIQuantity{T}}, channels::Vector{S}) = VectorSignal(convert(Array{SecondT{T},1}, time), channels)
-VectorSignal{T<:Real, S<:AbstractVector}(time::AbstractVector{T}, channels::Vector{S}) = throw(ArgumentError("unsupported time vector type"))
-
-# The more user-friendly APIs that implicitly create VectorSignals
-signal(time::AbstractVector, ::()) = VectorSignal(time, Array{None,1}[])
-signal(time::AbstractVector, channels::(AbstractVector...)) = VectorSignal(time, [c for c in channels])
-signal(time::AbstractVector, channels::AbstractVector...) = signal(time, channels)
-# For simple testing, allow vectorized functions
-signal(time::AbstractVector, fcns::(Function...)) = signal(time, map(f->f(time), fcns))
+inseconds{T<:Real}(time::Range{T})  = SIUnits.SIRange{typeof(time),T,0,0,1,0,0,0,0}(time)
+inseconds{T<:Real}(time::Vector{T}) = convert(Vector{SecondT{T}}, time)
+inseconds{T<:Real}(time::Vector{SIUnits.SIQuantity{T}}) = convert(Vector{SecondT{T}}, time)
+inseconds{T<:SecondT}(time::AbstractVector{T}) = time
+inseconds(time::AbstractVector) = throw(ArgumentError("unsupported time vector type"))
 
 ### These methods must be defined for all subtypes of Signal ###
 time(sig::AnyVectorSignal)      = sig.time
@@ -68,7 +72,7 @@ view(sig::Signal, idx::AbstractVector) = sig[idx]
 # TODO: perhaps I should check the variance of diff(time(sig))?
 regularize(sig::RegularSignal) = sig
 regularize{T<:Range}(sig::Signal{T}) = VectorSignal(time(sig), channels(sig))
-regularize(sig::Signal) = VectorSignal(linrange(float(time(sig)[1]),float(time(sig)[end]),length(time(sig))), channels(sig))
+regularize(sig::Signal) = VectorSignal(inseconds(linrange(float(time(sig)[1]),float(time(sig)[end]),length(time(sig)))), channels(sig))
 
 # Test if a signal is "regular" -- that is, is it sampled at an exact interval?
 isregular(::Signal) = false
@@ -94,7 +98,7 @@ Base.done(sig::Signal, i) = (i > length(sig))
 Base.isempty(sig::Signal) = (length(sig) == 0)
 
 # Information specific to regular signals:
-# Hack to get around poor typing in SIUnits division. I know that this is s⁻¹.
+# Hack to get around poor typing in SIUnits math. I know that this is s⁻¹.
 # TODO: should I give up trying to store time as an SI array? It can be a pain.
 samplingfreq(sig::RegularSignal) = (v = float(1/step(time(sig))); SIUnits.SIQuantity{typeof(v),0,0,-1,0,0,0,0}(v))
-samplingrate(sig::RegularSignal) = step(time(sig))
+samplingrate(sig::RegularSignal) = (v = float(step(time(sig)));   SIUnits.SIQuantity{typeof(v),0,0,1,0,0,0,0}(v))
