@@ -60,7 +60,7 @@ channels(sig::AnyVectorSignal)      = sig.channels
 channels(sig::AnyVectorSignal, idx) = sig.channels[idx]
 # TODO: Perhaps allow custom names/indexes like DataFrames?
 Base.getindex(sig::AnyVectorSignal, idx::Real=1)         = sig.channels[idx]
-Base.getindex(sig::AnyVectorSignal, idx::AbstractVector) = sig.channels[idx]
+Base.getindex(sig::AnyVectorSignal, idx::AbstractVector) = VectorSignal(sig.time, sig.channels[idx])
 ###
 
 # Basic view support; other Signal subtypes can specialize if it makes sense

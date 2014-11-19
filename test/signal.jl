@@ -47,3 +47,10 @@ spikes = signal(cumsum(rand(100)), snips)
 sig = signal([0:1/100:2pi], (sin, cos))
 @test !isregular(sig)
 @test isregular(regularize(sig))
+
+# Indexing by vectors returns Signals
+sig = signal(1:100, reshape(1:100*8, 100, 8))
+subsig = sig[2:3]
+@test length(subsig) == 2
+@test subsig[1] == sig[2]
+@test subsig[2] == sig[3]
