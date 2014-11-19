@@ -17,9 +17,9 @@ type RegularVectorSignal{T, S} <: RegularSignal{T, S}
     time::T
     channels::Vector{S}
 end
-typealias AnyVectorSignal Union(VectorSignal, RegularVectorSignal)
+typealias AnyVectorSignal{T,S} Union(VectorSignal{T,S}, RegularVectorSignal{T,S})
 
-function _checkargs(t, v)
+function _checkargs(t, v::Vector)
     ( (isa(t, Range) && step(t) > 0s) || issorted(t,lt=(<=)) ) || throw(ArgumentError("time vector must be monotonically increasing"))
     for c in v
         length(t) != length(c) && throw(ArgumentError("each channel must be the same length as time"))
@@ -47,9 +47,6 @@ VectorSignal{T<:Real, S<:AbstractVector}(time::AbstractVector{T}, channels::Vect
 signal(time::AbstractVector, ::()) = VectorSignal(time, Array{None,1}[])
 signal(time::AbstractVector, channels::(AbstractVector...)) = VectorSignal(time, [c for c in channels])
 signal(time::AbstractVector, channels::AbstractVector...) = signal(time, channels)
-# Matrices are assumed to be grouped signals. If you want multiple datapoints
-# per timepoint within one channel (which is uncommon), use a vector of vectors.
-signal(time::AbstractVector, data::AbstractMatrix) = VectorSignal(time, [data[:, i] for i in 1:size(data,2)]) # TODO: create a MatrixSignal?
 # For simple testing, allow vectorized functions
 signal(time::AbstractVector, fcns::(Function...)) = signal(time, map(f->f(time), fcns))
 

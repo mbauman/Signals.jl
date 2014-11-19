@@ -10,11 +10,11 @@ function Grid.interp{S<:SecondT}(sig::RegularSignal, ti::AbstractVector{S})
     tidxs = Array(Float64, length(ti))
     for i=1:length(ti) tidxs[i] = (ti[i] - t[1])/step(t) + 1; end
 
-    vi = [Grid.InterpGrid(float(c), Grid.BCnan, Grid.InterpLinear)[tidxs] for c in sig]
+    vi = [Grid.InterpGrid(c, Grid.BCnan, Grid.InterpLinear)[tidxs] for c in sig]
     VectorSignal(ti, vi)
 end
 
 function Grid.interp{S<:SecondT}(sig::Signal, ti::AbstractVector{S})
-    vi = [Grid.InterpIrregular(time(sig), float(c), Grid.BCnan, Grid.InterpLinear)[ti] for c in sig]
+    vi = [Grid.InterpIrregular(time(sig), c, Grid.BCnan, Grid.InterpLinear)[ti] for c in sig]
     VectorSignal(ti, vi)
 end
