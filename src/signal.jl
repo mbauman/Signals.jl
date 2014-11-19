@@ -92,7 +92,7 @@ Base.eltype{T,S}(::Signal{T,S}) = S
 
 # Iteration
 Base.start(::Signal) = 1
-Base.next(sig::Signal, i) = (channels(sig)[i], i+1)
+Base.next(sig::Signal, i) = (channels(sig, i), i+1)
 Base.done(sig::Signal, i) = (i > length(sig))
 Base.isempty(sig::Signal) = (length(sig) == 0)
 
