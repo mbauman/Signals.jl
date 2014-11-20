@@ -22,6 +22,9 @@ export Signal,
        interp,
        samplingfreq,
        samplingrate,
+       before,
+       after,
+       within,
        window
 
 include("signal.jl")

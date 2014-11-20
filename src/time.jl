@@ -1,60 +1,70 @@
 # Time selection & restriction functions
+abstract SnapMode
+type SnapExact    <: SnapMode; end
+type SnapPrevious <: SnapMode; end
+type SnapNext     <: SnapMode; end
+type SnapNearest  <: SnapMode; end
 
-# TODO: Perhaps use singleton types for the mode if this becomes a hotspot
-time2idx(sig::Signal, t::Real, mode::Symbol=:exact) = time2idx(sig, t*s, mode)  # Should this be allowed?
-function time2idx(sig::Signal, t::SecondT, mode::Symbol=:exact)
+time2idx(sig::Signal, t::SecondT) = time2idx(sig, t, SnapExact())
+function time2idx(sig::Signal, t::SecondT, ::SnapExact)
     ts = time(sig)
     ts[1] <= t <= ts[end] || throw(BoundsError())
-    if mode == :exact
-        r = searchsorted(ts, t)
-        isempty(r) && throw(InexactError())
-        return r[1]
-    elseif mode == :previous
-        return searchsortedlast(ts, t)
-    elseif mode == :next
-        return searchsortedfirst(ts, t)
-    elseif mode == :nearest
-        i = searchsortedlast(ts, t)
-        return t - ts[i] > ts[i+1] - t ? i+1 : i
-    else
-        error("unknown time2idx conversion mode")
-    end
+    r = searchsorted(ts, t)
+    isempty(r) && throw(InexactError())
+    return r[1]
+end
+function time2idx(sig::Signal, t::SecondT, ::SnapNearest)
+    ts = time(sig)
+    t <= ts[1] && return 1 # No bounds errors; these are easy cases
+    t >= ts[end] && return length(ts)
+    i = searchsortedlast(ts, t)
+    return ifelse(t - ts[i] > ts[i+1] - t, i+1, i)
+end
+function time2idx(sig::Signal, t::SecondT, ::SnapPrevious)
+    ts = time(sig)
+    t < ts[1] && throw(BoundsError())
+    searchsortedlast(ts, t)
+end
+function time2idx(sig::Signal, t::SecondT, ::SnapNext)
+    ts = time(sig)
+    t > ts[end] && throw(BoundsError())
+    searchsortedfirst(ts, t)
 end
 
 # Time restriction
-before(sig::Signal, t::SecondT) = before(sig, time2idx(sig, t, :previous))
+before(sig::Signal, t::SecondT) = before(sig, time2idx(sig, t, SnapPrevious()))
 before(sig::Signal, i::Real)    = within(sig, 1, i)
 
-after(sig::Signal, t::SecondT) = after(sig, time2idx(sig, t, :next))
+after(sig::Signal, t::SecondT) = after(sig, time2idx(sig, t, SnapNext()))
 after(sig::Signal, i::Real)    = within(sig, i, length(time(sig)))
 
 within(sig::Signal, i::(Real, Real))          = within(sig, t[1], t[2])
-within(sig::Signal, t::(SecondT, SecondT))    = within(sig, time2idx(sig, t[1], :next), time2idx(sig, t[2], :previous))
-within(sig::Signal, t1::SecondT, t2::SecondT) = within(sig, time2idx(sig, t1,   :next), time2idx(sig, t2,   :previous))
+within(sig::Signal, t::(SecondT, SecondT))    = within(sig, time2idx(sig, t[1], SnapNext()), time2idx(sig, t[2], SnapPrevious()))
+within(sig::Signal, t1::SecondT, t2::SecondT) = within(sig, time2idx(sig, t1,   SnapNext()), time2idx(sig, t2,   SnapPrevious()))
 function within(sig::Signal, i1::Real, i2::Real) # The real (and only) workhorse
-    Signal(timewithin(sig, i1, i2), chanswithin(i1, i2))
+    VectorSignal(timewithin(sig, i1, i2), chanswithin(sig, i1, i2))
 end
 
 # Private API (TODO: Generate these helper functions via metaprogramming?)
-timebefore(sig::Signal, t::SecondT)               = timebefore(sig, time2idx(sig, t, :previous))
+timebefore(sig::Signal, t::SecondT)               = timebefore(sig, time2idx(sig, t, SnapPrevious()))
 timebefore(sig::Signal, i::Real)                  = timewithin(sig, 1, i)
-timeafter(sig::Signal,  t::SecondT)               = timeafter(sig, time2idx(sig, t, :next))
+timeafter(sig::Signal,  t::SecondT)               = timeafter(sig, time2idx(sig, t, SnapNext()))
 timeafter(sig::Signal,  i::Real)                  = timewithin(sig, i, length(time(sig)))
-timewithin(sig::Signal, t1::SecondT, t2::SecondT) = timewithin(sig, time2idx(sig, t1,   :next), time2idx(sig, t2,   :previous))
+timewithin(sig::Signal, t1::SecondT, t2::SecondT) = timewithin(sig, time2idx(sig, t1,   SnapNext()), time2idx(sig, t2,   SnapPrevious()))
 timewithin(sig::Signal, i1::Real, i2::Real)       = time(sig, i1:i2)
 
-chanbefore(sig::Signal, idx, t::SecondT)               = chanbefore(sig, idx, time2idx(sig, t, :previous))
+chanbefore(sig::Signal, idx, t::SecondT)               = chanbefore(sig, idx, time2idx(sig, t, SnapPrevious()))
 chanbefore(sig::Signal, idx, i::Real)                  = chanwithin(sig, idx, 1, i)
-chanafter(sig::Signal,  idx, t::SecondT)               = chanafter(sig,  idx, time2idx(sig, t, :next))
+chanafter(sig::Signal,  idx, t::SecondT)               = chanafter(sig,  idx, time2idx(sig, t, SnapNext()))
 chanafter(sig::Signal,  idx, i::Real)                  = chanwithin(sig, idx, i, length(time(sig)))
-chanwithin(sig::Signal, idx, t1::SecondT, t2::SecondT) = chanwithin(sig, idx, time2idx(sig, t1,   :next), time2idx(sig, t2,   :previous))
+chanwithin(sig::Signal, idx, t1::SecondT, t2::SecondT) = chanwithin(sig, idx, time2idx(sig, t1,   SnapNext()), time2idx(sig, t2,   SnapPrevious()))
 chanwithin(sig::Signal, idx, i1::Real, i2::Real)       = sig[idx][i1:i2]
 
-chansbefore(sig::Signal, t::SecondT)               = chansbefore(sig, time2idx(sig, t, :previous))
+chansbefore(sig::Signal, t::SecondT)               = chansbefore(sig, time2idx(sig, t, SnapPrevious()))
 chansbefore(sig::Signal, i::Real)                  = chanswithin(sig, 1, i)
-chansafter(sig::Signal,  t::SecondT)               = chansafter(sig, time2idx(sig, t, :next))
+chansafter(sig::Signal,  t::SecondT)               = chansafter(sig, time2idx(sig, t, SnapNext()))
 chansafter(sig::Signal,  i::Real)                  = chanswithin(sig, i, length(time(sig)))
-chanswithin(sig::Signal, t1::SecondT, t2::SecondT) = chanswithin(sig, time2idx(sig, t1,   :next), time2idx(sig, t2,   :previous))
+chanswithin(sig::Signal, t1::SecondT, t2::SecondT) = chanswithin(sig, time2idx(sig, t1,   SnapNext()), time2idx(sig, t2,   SnapPrevious()))
 chanswithin(sig::Signal, i1::Real, i2::Real)       = [c[i1:i2] for c in sig]
 
 # Windowing a regular signal returns a signal of a signals: one for each channel
@@ -75,11 +85,11 @@ chanswithin(sig::Signal, i1::Real, i2::Real)       = [c[i1:i2] for c in sig]
 #     timebase. This is something that the user could do ahead of time if they
 #     are concerned about jitter on the scale of ±0.5dt.
 function window{S<:SecondT}(sig::RegularSignal, at::AbstractVector{S}, within::(Real, Real))
-    window(sig, [time2idx(sig, a, :nearest) for a in at], within)
+    window(sig, [time2idx(sig, a, SnapNearest()) for a in at], within)
 end
 # Can't use within::(Union(SecondT,Real), Union(SecondT,Real)) due to ambiguity
 function window{S<:SecondT}(sig::RegularSignal, at::AbstractVector{S}, within::(SecondT, SecondT))
-    window(sig, [time2idx(sig, a, :nearest) for a in at], within) 
+    window(sig, [time2idx(sig, a, SnapNearest()) for a in at], within)
 end
 function window{R<:Real}(sig::RegularSignal, at::AbstractVector{R}, within::(SecondT, SecondT))
     window(sig, at, (iceil(within[1]*samplingfreq(sig)), ifloor(within[2]*samplingfreq(sig))))
@@ -102,7 +112,7 @@ function window{S<:SecondT}(sig::Signal, at::AbstractVector{S}, within::(Real, R
     # Set number of indexes within each window, about time
     r1, r2 = within
     r = r1:r2
-    cs = [(i = time2idx(sig, t, :nearest); signal(time(sig, i+r) - t, c[i+r])) for t in at, c in sig]
+    cs = [(i = time2idx(sig, t, SnapNearest()); signal(time(sig, i+r) - t, c[i+r])) for t in at, c in sig]
     signal(at, cs)
 end
 function window{R<:Real}(sig::Signal, at::AbstractVector{R}, within::(Real, Real))
