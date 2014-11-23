@@ -16,7 +16,6 @@ Since a Signal is itself a vector of channels, `sig1` can be a channel of anothe
 
     julia> Pkg.clone("https://github.com/mbauman/Signals.jl.git")
            Pkg.checkout("SIUnits") # Currently requires the master branch
-           Pkg.checkout("Grid") # Currently requires the master branch
            using Signals
            
     julia> fs = 40000 # Generate a 40kHz noisy signal, with spike-like stuff added for testing
@@ -31,7 +30,7 @@ Since a Signal is itself a vector of channels, `sig1` can be a channel of anothe
            end
            
     julia> sig = signal(0:1/fs:(length(y)-1)/fs, y) # Create a signal object!
-    Signal with 1 channel over t=0.0 s  to 60.0 s , at 40000.0 Hz:
+    RegularVectorSignal with 1 channel over t=0.0 s to 60.0 s, at 40000.0 s⁻¹:
       Each channel has 2400001 datapoints of type Float64
 
 Signals know their sampling rate and display it nicely. The time vector in this case is stored as a range (with all the optimizations—both space and time—that it brings).  There can be many channels, all which share the same time base.
@@ -39,45 +38,40 @@ Signals know their sampling rate and display it nicely. The time vector in this 
 But you can also create signals that aren't regularly sampled.  Let's take this one channel and find those spikes again.
 
     julia> idxs = find(diff(sig[1] .< -15) .> 0)
-    259-element Array{Int64,1}: …
+    250-element Array{Int64,1}: …
 
     julia> spikes = window(sig, idxs, (-200μs, 800μs))
-    Signal with 1 channel over t=0.64365 s  to 59.996175 s :
-      Each channel has 259 datapoints of type Array{Float64,1}
-       0.64365 s : ▆▆▆▆▆▆▆▆▅▄▃▂▂▁▁▁▂▂▃▄▅▆▆▇▇▇▇█▇▇▆▆▆▆▅▆▆▆▆▆▆
-      0.855525 s : ▄▄▄▄▄▄▄▃▃▂▂▁▁▁▁▁▁▁▂▂▃▅▅▇█▇▇▇▆▆▅▅▄▃▅▃▄▄▄▄▄
-      1.028275 s : ▆▆▆▆▆▆▆▆▅▄▄▂▂▁▁▁▁▂▃▄▅▆▆▇▇▇█▇▇▇▇▆▆▇▆▅▆▆▅▅▆
-        1.7888 s : ▄▅▄▅▅▅▄▄▃▂▂▁▂▁▁▁▁▁▂▃▄▅▆▇▇▇█▇▆▆▅▅▃▄▅▅▄▅▄▄▄
-      1.827725 s : ▆▆▅▅▆▅▅▅▄▄▂▁▁▁▁▂▂▃▄▄▅▆▆▇▇▇█▇▇▇▆▆▆▆▆▅▅▆▆▆▆
-        2.0603 s : ▄▄▅▅▄▄▅▄▃▂▂▂▂▁▁▁▁▁▁▂▂▃▅▆▇▇█▇▇▆▆▅▅▅▄▅▄▅▄▃▄
-      2.234825 s : ▄▄▄▄▅▄▃▃▃▂▁▁▁▁▁▁▁▁▂▃▄▅▆▆▇█▆▇▆▆▅▄▄▄▄▄▃▄▄▄▄
-        2.2413 s : ▆▆▆▆▆▆▆▅▅▄▃▂▂▁▁▁▁▂▂▅▅▅▆▇▇▇▇▇▇█▆▆▆▆▆▆▆▆▆▆▆
-      2.826825 s : ▅▆▆▅▆▆▅▆▅▄▃▂▁▁▁▁▂▂▂▄▅▅▆▇█▇▇▇▇▇▆▆▅▅▅▆▆▆▅▆▅
-        2.8441 s : ▇▇▆▆▆▆▆▅▅▄▃▂▂▁▁▁▂▂▃▅▅▅▆▆▇▇█▇▇▇▆▇▆▆▅▆▆▆▆▅▆
-      2.891975 s : ▅▅▅▅▄▅▄▄▄▃▃▂▂▁▁▁▁▁▁▂▃▄▅▆▇▇█▇▇▇▆▅▄▅▄▅▅▆▅▄▄
-      2.892025 s : ▅▅▄▅▄▄▄▃▃▂▂▁▁▁▁▁▁▂▃▄▅▆▇▇█▇▇▇▆▅▄▅▄▅▅▆▅▄▄▄▅
-        3.2246 s : ▅▄▅▅▄▅▄▄▃▃▂▂▂▁▁▁▁▂▂▂▂▃▅▆▇▇█▇▇▇▆▆▅▄▄▄▄▄▅▄▄
-        3.5875 s : ▄▅▅▄▄▄▃▃▃▂▂▂▂▁▁▁▁▁▂▃▃▄▆▆▇▇█▇▆▇▅▅▅▄▄▄▄▄▄▅▄
-      3.621275 s : ▄▄▄▅▄▄▃▃▃▂▂▁▁▁▁▁▁▁▁▁▃▃▄▆▇▆▇█▇▆▆▅▄▅▄▄▄▄▄▄▄
-      3.621325 s : ▄▅▄▄▃▃▃▂▂▁▁▁▁▁▁▁▁▁▃▃▄▆▇▆▇█▇▆▆▅▄▅▄▄▄▄▄▄▄▄▄
-        3.7102 s : ▆▅▆▆▆▆▅▅▄▄▃▃▂▁▁▁▂▂▃▄▅▅▆▆▇▇▇▇█▇▇▆▆▅▆▆▅▆▆▅▆
-        4.1447 s : ▅▅▅▅▄▄▄▃▄▃▂▂▁▂▁▁▂▂▂▃▄▅▆▇█▇▇▇▇▆▅▄▅▄▄▅▅▄▄▅▄
-      4.647975 s : ▆▆▆▅▆▆▆▅▅▄▃▃▂▁▁▁▂▃▃▄▅▅▆▇▇▇█▇▇▇▇▇▆▆▅▆▅▅▆▆▆
-      4.727675 s : ▆▆▇▆▆▆▅▅▅▃▂▂▁▁▁▂▂▃▄▅▆▆▆▇▇█▇▇▇▇▇▆▆▅▆▆▆▅▆▆▆
-      ⋮          : ⋮
+    VectorSignal with 1 channel over t=0.7552 s to 59.584775 s:
+      Each channel has 250 datapoints of type ContiguousView{Float64,1,Array{Float64,2}}
+        0.7552 s: ▅▅▄▄▅▅▄▄▃▂▂▂▁▁▁▁▁▂▂▃▄▅▅▇▇▇█▇▇▆▆▄▄▄▅▄▄▄▃▄▄
+       0.75935 s: ▆▅▆▆▆▆▅▅▄▄▃▃▁▁▁▂▂▃▃▄▅▆▆▇▇█▇▇▇▆▇▆▆▅▆▆▆▅▆▆▆
+      1.622625 s: ▄▅▄▃▅▄▄▃▃▂▂▁▁▁▁▁▁▁▂▃▄▅▅▇▇▇▇█▆▆▅▄▄▅▄▄▄▄▄▄▄
+       1.70595 s: ▅▄▅▅▄▄▄▃▃▂▂▂▂▁▁▁▁▂▂▃▄▅▆▇▇▇█▇▆▆▅▅▄▅▄▄▄▄▄▄▅
+       1.74135 s: ▆▆▆▅▅▅▅▄▄▃▂▂▂▁▁▂▂▃▄▅▅▆▇▇█▆▇▇▇▆▇▆▆▆▅▆▆▅▅▆▅
+      1.761325 s: ▆▇▆▆▆▆▅▄▄▃▂▁▁▁▁▁▂▃▄▅▅▆▇▇▇▇▇█▇▇▇▆▅▆▆▅▅▅▆▅▆
+      1.946375 s: ▆▇▆▆▆▆▅▅▅▃▃▁▂▁▂▂▃▄▅▅▆▆▇▇█▇▇▇▇▇▇▆▆▆▆▆▆▆▆▆▆
+       1.97465 s: ▅▄▅▄▅▄▄▄▃▂▂▂▁▁▁▁▁▁▂▃▄▄▆▇▇█▇▇▇▆▅▄▅▅▄▅▄▅▄▄▄
+      2.546375 s: ▅▅▄▄▄▄▄▄▄▃▂▁▁▁▁▁▁▂▂▃▄▅▇▇▆▇█▇▆▆▅▄▄▄▅▄▄▅▄▄▄
+        2.8466 s: ▇▆▆▆▆▆▆▅▅▄▃▂▂▁▁▁▁▂▄▄▅▅▆▆▇▇█▇▇▆▆▆▆▆▆▆▅▆▆▆▆
+      3.150275 s: ▆▆▆▆▆▆▆▅▅▄▃▂▂▁▁▁▁▃▃▄▅▆▆▆▇▇█▇▇▆▆▆▆▆▅▆▅▆▆▅▆
+       3.34315 s: ▅▆▄▅▄▄▄▃▃▂▂▁▁▁▁▂▂▃▄▅▆▇▇▇█▇▇▇▆▅▅▅▄▄▅▅▄▅▅▅▄
+       3.86275 s: ▄▄▃▄▄▃▄▃▂▂▁▂▁▁▁▁▂▁▃▃▅▅▆█▇▇▆▆▆▅▄▄▄▄▃▄▄▄▄▄▄
+      4.142575 s: ▆▆▆▆▆▅▅▅▅▄▃▂▁▁▁▂▂▂▃▄▄▅▆▇▇▇▇█▇▇▆▆▆▆▅▆▆▆▅▆▆
+      4.451575 s: ▄▄▅▄▄▄▄▃▃▂▂▁▁▁▁▁▁▁▂▂▄▄▆▆▇▇█▆▆▅▅▄▄▄▄▄▄▄▄▃▄
+      ⋮         : ⋮
 
-The `window` function is returning 1ms of data back to us for each threshold, packaged together into an irregularly sampled signal.  Keeping those timestamps neatly connected to the snippets.
+The `window` function is returning 1ms of data back to us for each threshold, packaged together into an irregularly sampled signal.  It keeps the threshold-crossing timestamps neatly connected to the actual snippet waveforms.
 
 Let's look a bit closer at the first "channel" of `spikes`:
 
     julia> snips = spikes[1]
-    Signal with 259 channels over t=-0.0002 s  to 0.0008 s , at 40000.0 Hz:
+    RegularMatrixSignal with 250 channels over t=-0.0002 s to 0.0008 s, at 40000.0 s⁻¹:
       Each channel has 41 datapoints of type Float64
-
-Now, the elements of `snips` are still called channels, but they're really just repetitions.  There's 258 of them, one for each threshold crossing.  And their time base, -0.2 to 0.8ms is still there.
+  
+Now, the elements of `snips` are still called channels, but they're really just repetitions.  There's 250 of them, one for each threshold crossing.  And their time base, -0.2 to 0.8ms is still there.
 
     julia> snips[1]
-    41-element Array{Float64,1}: …
+    41-element ContiguousView{Float64,1,Array{Float64,2}}: …
 
 ## Stuff to do
 
