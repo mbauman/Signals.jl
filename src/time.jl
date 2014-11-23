@@ -97,7 +97,7 @@ end
 function window{R<:Real,R2<:Real}(sig::RegularSignal, at::AbstractVector{R}, within::(R2, R2))
     r = within[1]:within[2]
     dt = float(samplingrate(sig)) # TODO: Math with SIUnits is very annoying.
-    t = (within[1]*dt):dt:(within[2]*dt)
+    t = inseconds((within[1]*dt):dt:(within[2]*dt))
     cs = [VectorSignal(t, [c[a+r] for a in at]) for c in sig]
     VectorSignal(time(sig, at), cs)
 end

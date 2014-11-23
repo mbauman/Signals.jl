@@ -28,6 +28,7 @@ export Signal,
        window
 
 include("signal.jl")
+include("matrix.jl")
 include("show.jl")
 include("interpolation.jl")
 include("time.jl")
