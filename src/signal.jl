@@ -1,9 +1,10 @@
 import SIUnits
 typealias SecondT{T} SIUnits.SIQuantity{T,0,0,1,0,0,0,0}
+using DataFrames
 
 # A signal has a common timebase (an abstract vector of type T) in seconds, 
 # and a number of channels that it iterates over (each of type S).
-abstract Signal{T<:AbstractVector, S<:AbstractVector} <: AbstractVector{S}
+abstract Signal{T<:AbstractVector, S<:Union(AbstractVector, AbstractDataFrame)} <: AbstractDataFrame
 # An evenly sampled signal. Allows for optimizations and saves storage space
 abstract RegularSignal{T<:Range, S} <: Signal{T, S}
 
@@ -31,18 +32,18 @@ function _checkargs(t, v::Vector)
     eltype(t) <: SecondT || throw(ArgumentError("time must be specified in seconds"))
 end
 # The canonical constructor for both VectorSignals and RegularVectorSignals
-VectorSignal{T<:SecondT, S<:AbstractVector}(time::Range{T}, channels::Vector{S}) =
+VectorSignal{T<:SecondT, S<:Union(AbstractVector, AbstractDataFrame)}(time::Range{T}, channels::Vector{S}) =
     RegularVectorSignal{typeof(time), S}(time, channels) # TODO: is this ok? The VectorSignal constructor can return a type that's not VectorSignal!
-VectorSignal{T<:SecondT, S<:AbstractVector}(time::AbstractVector{T}, channels::Vector{S}) =
+VectorSignal{T<:SecondT, S<:Union(AbstractVector, AbstractDataFrame)}(time::AbstractVector{T}, channels::Vector{S}) =
     VectorSignal{typeof(time), S}(time, channels)
 
 # The lowercase s-signal is more forgiving than the strictly-typed constructors.
 # It will automatically convert time vectors into seconds (is this a good idea?)
 # and since inference can get messy with vectors of vectors (especially at the
 # REPL prompt) it takes a varargs list or tuple of the channel vectors.
-signal(time::AbstractVector, channels::(AbstractVector...)) = VectorSignal(inseconds(time), [c for c in channels])
 signal(time::AbstractVector, channels...) = signal(time, channels)
 signal(time::AbstractVector, ::()) = VectorSignal(inseconds(time), Array{None,1}[])
+signal(time::AbstractVector, channels::(Union(AbstractVector,AbstractDataFrame)...)) = VectorSignal(inseconds(time), [c for c in channels])
 # For simple testing, allow vectorized functions
 signal(time::AbstractVector, fcns::(Function...)) = signal(time, map(f->f(time), fcns))
 
