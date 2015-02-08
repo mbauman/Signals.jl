@@ -16,8 +16,7 @@ sig = Signal(1:100, reshape(1:100*8, 100, 8))
 @test_throws BoundsError sig[0]
 @test_throws BoundsError sig[9]
 
-# A Signal with heterogeneous channels
-sig = Signal(1:100, [1:100], [1.:100.]*2, [big(1):100]*4)
+sig = Signal(1:100, [1:100 [1.:100.]*2 [1:100]*4])
 @test length(sig) == 3
 @test sig[1]*4 == sig[2]*2 == sig[3] == [1:100]*4
 @test_throws BoundsError sig[0]

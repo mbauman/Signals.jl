@@ -86,9 +86,9 @@ Base.elsize(sig::Signal) = size(sig.time)
 Base.getindex(sig::AbstractSignal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = sub(sig, idxs...)
 
 # TODO: We need to propogate dimension names, maybe metadata, too?
-Base.sub(sig::AbstractSignal, idx::Int) = sub(sig.data, :, idx)
-Base.sub(sig::AbstractSignal, idxs::Int...) = sub(sig.data, :, idxs...)
-Base.sub(sig::AbstractSignal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = Signal(sig.time, sub(sig.data, :, idxs...))
+Base.sub(sig::AbstractSignal, idx::Int) = (checkbounds(sig, idx); sub(sig.data, :, idx))
+Base.sub(sig::AbstractSignal, idxs::Int...) = (checkbounds(sig, idxs...); sub(sig.data, :, idxs...))
+Base.sub(sig::AbstractSignal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = (checkbounds(sig, idxs...); Signal(sig.time, sub(sig.data, :, idxs...)))
 
 # Use linear indexing for iteration
 Base.start(::Signal) = 1
