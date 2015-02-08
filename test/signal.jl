@@ -40,7 +40,7 @@ spikes = Signal(cumsum(rand(100)), snips)
 @test_throws ArgumentError Signal([1.,2.,2.])
 
 ## Regularization:
-sig = Signal([0:1/100:2pi], (sin, cos))
+sig = Signal([0:1/100:2pi], [sin, cos])
 @test !isregular(sig)
 @test isregular(regularize(sig))
 
