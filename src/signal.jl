@@ -1,6 +1,6 @@
 import SIUnits
 import SIUnits.ShortUnits: s
-typealias SecondT{T} SIUnits.SIQuantity{T,0,0,1,0,0,0,0}
+typealias SecondT{T} SIUnits.SIQuantity{T,0,0,1,0,0,0,0,0,0}
 
 # A signal has a common timebase (an abstract vector of type T) in seconds, 
 # and an array of data that it iterates and indexes over (each element is an 
@@ -33,12 +33,13 @@ function _checkargs(t, d)
 end
 
 # The canonical constructor. This must figure out what the element type will be.
+# This is really hard with SubArrays and slices of Signals.
 stagedfunction Signal{T<:SecondT, R, N}(time::AbstractVector{T}, data::AbstractArray{R, N}, dims::(Symbol...), meta::Dict{Symbol, Any})
     data <: AbstractVector && return :(throw(ArgumentError("Signal data must be at least 2-dimensional")))
-    S = SubArray{T, 1, data, tuple(UnitRange{Int}, ntuple(N-1, (i)->Int)...), N}
+    S = SubArray{T, 1, data, tuple(Colon, ntuple(N-1, (i)->Int)...), N}
     # If the data are Signals themselves, we'll return a SignalVector
     if data <: Signal
-        S = Signal{time, R, 1, S}
+        S = Signal{time, R, 1, S} # TODO: is S right here?
     end
     quote
         Signal{$time, $S, N-1, $data}(time, data, dims, meta)
@@ -56,11 +57,11 @@ Signal(time::AbstractVector, fcns::Vector{Function}) = Signal(time, Float64[f(i)
 
 # Convert the time ranges and vectors to Seconds without re-allocating them
 # TODO: There has got to be a better way! github.com/Keno/SIUnits.jl/issues/25
-inseconds{T<:Real}(time::Range{T})  = SIUnits.SIRange{typeof(time),T,0,0,1,0,0,0,0}(time)
+inseconds{T<:Real}(time::Range{T})  = SIUnits.SIRange{typeof(time),T,0,0,1,0,0,0,0,0,0}(time)
 inseconds{T<:Real}(time::Vector{T}) = convert(Vector{SecondT{T}}, time)
 inseconds{T<:Real}(time::Vector{SIUnits.SIQuantity{T}}) = convert(Vector{SecondT{T}}, time)
 inseconds{T<:SecondT}(time::AbstractVector{T}) = time
-inseconds{R,T}(time::SIUnits.SIRange{R,T,0,0,1,0,0,0,0}) = time
+inseconds{R,T}(time::SIUnits.SIRange{R,T,0,0,1,0,0,0,0,0,0}) = time
 inseconds(time::AbstractVector) = throw(ArgumentError("unsupported time vector type"))
 
 # Ensure the data is at least a matrix
@@ -82,18 +83,20 @@ Base.size(sig::Signal) = size(sig.data)[2:end]
 Base.size(sig::Signal, I::Int) = size(sig.data, I+1)
 Base.elsize(sig::Signal) = size(sig.time)
 # TODO: Perhaps allow custom names/indexes like DataFrames?
-Base.getindex(sig::AbstractSignal, idx::Real) = sub(sig.data, 1:size(sig.data,1), idx)
-Base.getindex(sig::AbstractSignal, idxs::Real...) = sub(sig.data, 1:size(sig.data,1), idxs...)
-Base.getindex(sig::AbstractSignal, idxs::Union(Real,AbstractVector)...) = Signal(sig.time, sub(sig.data, 1:size(sig.data,1), idxs...))
+Base.getindex(sig::AbstractSignal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = sub(sig, idxs...)
 
-# Iteration is a pain because the returned subarray type is dependent upon the
-# number of indices used in the indexing.
-# Base.start(::Signal) = 1
-# Base.next(sig::Signal, i) = (channels(sig, i), i+1)
-# Base.done(sig::Signal, i) = (i > length(sig))
+# TODO: We need to propogate dimension names, maybe metadata, too?
+Base.sub(sig::AbstractSignal, idx::Int) = sub(sig.data, :, idx)
+Base.sub(sig::AbstractSignal, idxs::Int...) = sub(sig.data, :, idxs...)
+Base.sub(sig::AbstractSignal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = Signal(sig.time, sub(sig.data, :, idxs...))
+
+# Use linear indexing for iteration
+Base.start(::Signal) = 1
+Base.next(sig::Signal, i) = (sig[i], i+1)
+Base.done(sig::Signal, i) = i > prod(size(sig))
 
 # Information specific to regular signals:
 # Hack to get around poor typing in SIUnits math. I know that these are s⁻¹ & s.
 # TODO: should I give up trying to store time as an SI array? It can be a pain.
-samplingfreq(sig::RegularSignal) = (v = float(1/step(sig.time)); SIUnits.SIQuantity{typeof(v),0,0,-1,0,0,0,0}(v))
-samplingrate(sig::RegularSignal) = (v = float(step(sig.time));   SIUnits.SIQuantity{typeof(v),0,0,1,0,0,0,0}(v))
+samplingfreq(sig::RegularSignal) = (v = float(1/step(sig.time)); SIUnits.SIQuantity{typeof(v),0,0,-1,0,0,0,0,0,0}(v))
+samplingrate(sig::RegularSignal) = (v = float(step(sig.time));   SIUnits.SIQuantity{typeof(v),0,0,1,0,0,0,0,0,0}(v))
