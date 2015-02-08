@@ -17,7 +17,7 @@ function Base.writemime(io::IO, m::MIME"text/plain", sig::Signal)
     print(io, summary(sig))
     length(sig) == 0 && return
     println(io, ":")
-    print(io, "  Each ", sig.dims[1] == symbol("") ? "element" : sig.dims[1], 
+    print(io, "  Each ", !isempty(sig.dims) && sig.dims[1] != symbol("") ? sig.dims[1] : "element", 
               " has ", length(sig.time), " datapoints from ", sig.time[1], " to ", sig.time[end])
     isa(sig, RegularSignal) && print(io, ", at ", samplingfreq(sig))
     

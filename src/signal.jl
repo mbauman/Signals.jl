@@ -35,7 +35,6 @@ end
 # The canonical constructor. This must figure out what the element type will be.
 # This is really hard with SubArrays and slices of Signals.
 stagedfunction Signal{T<:SecondT, R, N}(time::AbstractVector{T}, data::AbstractArray{R, N}, dims::(Symbol...), meta::Dict{Symbol, Any})
-    data <: AbstractVector && return :(throw(ArgumentError("Signal data must be at least 2-dimensional")))
     S = SubArray{T, 1, data, tuple(Colon, ntuple(N-1, (i)->Int)...), N}
     # If the data are Signals themselves, we'll return a SignalVector
     if data <: Signal
@@ -48,9 +47,9 @@ end
 
 # A more forgiving constructor with defaults
 function Signal{T,N}(time::AbstractVector, data::AbstractArray{T,N} = Array(Any, length(time), 0), 
-                     dims::(Symbol...) = (N<=2 ? (:channel,) : ntuple(N-1, (i)->symbol(""))),
+                     dims::(Symbol...) = ntuple(N-1, (i)->symbol("")),
                      meta::Dict{Symbol,Any} = Dict{Symbol, Any}())
-    Signal(inseconds(time), atleastmatrix(data), dims, meta)
+    Signal(inseconds(time), data, dims, meta)
 end
 # For simple testing, allow vectorized functions. This could be improved
 Signal(time::AbstractVector, fcns::Vector{Function}) = Signal(time, Float64[f(i) for i in time, f in fcns])
@@ -63,11 +62,6 @@ inseconds{T<:Real}(time::Vector{SIUnits.SIQuantity{T}}) = convert(Vector{SecondT
 inseconds{T<:SecondT}(time::AbstractVector{T}) = time
 inseconds{R,T}(time::SIUnits.SIRange{R,T,0,0,1,0,0,0,0,0,0}) = time
 inseconds(time::AbstractVector) = throw(ArgumentError("unsupported time vector type"))
-
-# Ensure the data is at least a matrix
-atleastmatrix(d::AbstractVector) = reshape(d, (length(d), 1))
-atleastmatrix(d::AbstractArray) = d
-atleastmatrix(d) = throw(ArgumentError("unsupported data array type"))
 
 # Convert to a RegularSignal by blindly shifting time underneath the data
 # TODO: perhaps I should check the variance of diff(time(sig))?
@@ -90,10 +84,34 @@ Base.sub(sig::AbstractSignal, idx::Int) = (checkbounds(sig, idx); sub(sig.data, 
 Base.sub(sig::AbstractSignal, idxs::Int...) = (checkbounds(sig, idxs...); sub(sig.data, :, idxs...))
 Base.sub(sig::AbstractSignal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = (checkbounds(sig, idxs...); Signal(sig.time, sub(sig.data, :, idxs...)))
 
+# TODO: remove this once PR is merged
+import Base: checkbounds, trailingsize
+checkbounds(sz::Int, ::Colon) = nothing
+function checkbounds(A::AbstractMatrix, I::Union(Real,Colon,AbstractArray), J::Union(Real,Colon,AbstractArray))
+    checkbounds(size(A,1), I)
+    checkbounds(size(A,2), J)
+end
+function checkbounds(A::AbstractArray, I::Union(Real,Colon,AbstractArray), J::Union(Real,Colon,AbstractArray))
+    checkbounds(size(A,1), I)
+    checkbounds(trailingsize(A,2), J)
+end
+function checkbounds(A::AbstractArray, I::Union(Real,Colon,AbstractArray)...)
+    n = length(I)
+    if n > 0
+        for dim = 1:(n-1)
+            checkbounds(size(A,dim), I[dim])
+        end
+        checkbounds(trailingsize(A,n), I[n])
+    end
+end
+
+
 # Use linear indexing for iteration
 Base.start(::Signal) = 1
 Base.next(sig::Signal, i::Int) = (sig[i], i+1)
 Base.done(sig::Signal, i::Int) = i > prod(size(sig))
+
+# Base.reshape(sig::Signal, idxs::(Int64...,)) = (sig.data = reshape(sig.data, tuple(length(sig.time), idxs...)); sig)
 
 # Information specific to regular signals:
 # Hack to get around poor typing in SIUnits math. I know that these are s⁻¹ & s.
