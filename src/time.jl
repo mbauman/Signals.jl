@@ -35,9 +35,10 @@ end
 # TODO: "lift" these computations as FloatRange does?
 _time2idxf(sig::RegularSignal, t::SecondT) = (t - sig.time[1])*samplingfreq(sig)
 time2idx(sig::RegularSignal, t::SecondT, ::SnapExact)    = 1+Int(_time2idxf(sig,t))
-time2idx(sig::RegularSignal, t::SecondT, ::SnapNearest)  = 1+round(Int, _time2idxf(sig,t))
-time2idx(sig::RegularSignal, t::SecondT, ::SnapPrevious) = 1+floor(Int, _time2idxf(sig,t))
-time2idx(sig::RegularSignal, t::SecondT, ::SnapNext)     = 1+ceil(Int, _time2idxf(sig,t))
+# TODO: fix inference here
+time2idx(sig::RegularSignal, t::SecondT, ::SnapNearest)  = 1+Int(round(Int, _time2idxf(sig,t)))
+time2idx(sig::RegularSignal, t::SecondT, ::SnapPrevious) = 1+Int(floor(Int, _time2idxf(sig,t)))
+time2idx(sig::RegularSignal, t::SecondT, ::SnapNext)     = 1+Int(ceil(Int, _time2idxf(sig,t)))
 
 # Time restriction
 before(sig::Signal, t::SecondT) = before(sig, time2idx(sig, t, SnapPrevious()))
