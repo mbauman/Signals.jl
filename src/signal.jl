@@ -47,8 +47,8 @@ stagedfunction Signal{T<:SecondT, R, N}(time::AbstractVector{T}, data::AbstractA
 end
 
 # A more forgiving constructor with defaults
-function Signal{T,N}(time::AbstractVector, data::AbstractArray{T,N}, 
-                     dims::(Symbol...) = N<=2 ? (:channel,) : ntuple(N-1, (i)->symbol("")),
+function Signal{T,N}(time::AbstractVector, data::AbstractArray{T,N} = Array(Any, length(time), 0), 
+                     dims::(Symbol...) = (N<=2 ? (:channel,) : ntuple(N-1, (i)->symbol(""))),
                      meta::Dict{Symbol,Any} = Dict{Symbol, Any}())
     Signal(inseconds(time), atleastmatrix(data), dims, meta)
 end
