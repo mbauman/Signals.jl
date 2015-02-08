@@ -1,6 +1,6 @@
 # test the time restriction methods
 t = 0:.25:10
-sig = signal(t, [t])
+sig = Signal(t, [t])
 b1 = before(sig, 5.0s)
 @test b1.time == 0s:0.25s:5s
 @test all(b1[1] .== 0:0.25:5)
@@ -13,7 +13,7 @@ w1 = within(sig, 2s, 3s)
 
 # Matrix Signal
 t = 0:.25:10
-sig = signal(t, [t 2t])
+sig = Signal(t, [t 2t])
 b1 = before(sig, 5.0s)
 @test b1.time == 0s:0.25s:5s
 @test all(b1[1] .== 0:0.25:5)
