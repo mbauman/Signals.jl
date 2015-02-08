@@ -1,5 +1,4 @@
-julia 0.3-
-ArrayViews
+julia 0.4-
 Sparklines
 Grid
 SIUnits
