@@ -84,7 +84,7 @@ Let's look a bit closer at the first "channel" of `spikes`:
      -1.983322545183078    -0.142295398413273       -3.4065430978158675    -2.4177907662237255
       1.2580997101547946   -7.5539375839864995       0.9363466336404049     7.138836686241775
       1.4772561295127062    4.239547752352428    …   8.476482728729541      0.28644915870329835
-  
+
 Now, the elements of `snips` are still called channels, but they're really just repetitions.  There's 250 of them, one for each threshold crossing.  And their time base, -0.2 to 0.8ms is still there.
 
     julia> snips[1]'

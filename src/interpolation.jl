@@ -16,8 +16,10 @@ function Grid.interp{S<:SecondT}(sig::RegularSignal, ti::AbstractVector{S})
 end
 
 function Grid.interp{S<:SecondT}(sig::Signal, ti::AbstractVector{S})
-    g = Grid.InterpIrregular(sig.time, sig.data, Grid.BCnan, Grid.InterpLinear)
-    vi = [g[t, chan] for t in ti, chan=1:length(sig)]
+    # Grid doesn't support multidimensional irregular interpolation, so work
+    # around it for now
+    gs = [Grid.InterpIrregular(sig.time, sig.data[:,chan], Grid.BCnan, Grid.InterpLinear) for chan=1:length(sig)]
+    vi = eltype(sig.data)[g[t] for t in ti, g in gs]
     reshape(vi, tuple(length(ti), size(sig)...))
     Signal(ti, vi, sig.dims, sig.meta)
 end
