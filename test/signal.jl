@@ -32,7 +32,7 @@ snips = Signal(t1, randn(length(t1), 100))
 @test samplingrate(snips) == (2.5e-5)s
 spikes = Signal(cumsum(rand(100)), snips)
 @test length(spikes) == 1
-@test spikes[1] === snips
+@test spikes[1] == snips
 @test !isregular(spikes)
 
 # Ensure we cannot build a Signal with bad time vectors
