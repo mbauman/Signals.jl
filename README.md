@@ -94,6 +94,10 @@ Now, the elements of `snips` are still called channels, but they're really just 
     julia> snips.time
     -0.0002 s:2.5e-5 s:0.0008 s
 
+## Implementation
+
+An N-dimensional Signal is quite simply an N+1 dimensional array, with the first dimension representing the time.  As such, indexing a 1-dimensional signal as `sig[1]` just returns `sig.data[:,1]`. The only tricky thing here is determining what element type to report to the AbstractArray supertype, since it's a vector and the exact type depends upon *how* we create the vector (e.g., SubArray vs Array vs ...).
+
 ## Stuff to do
 
 Take a look at the issues list for some of my current thoughts.  Some big-ticket items that are still outstanding are smart plotting (not just sparklines) and high-level filtering.
