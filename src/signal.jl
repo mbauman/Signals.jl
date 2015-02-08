@@ -92,8 +92,8 @@ Base.sub(sig::AbstractSignal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...)
 
 # Use linear indexing for iteration
 Base.start(::Signal) = 1
-Base.next(sig::Signal, i) = (sig[i], i+1)
-Base.done(sig::Signal, i) = i > prod(size(sig))
+Base.next(sig::Signal, i::Int) = (sig[i], i+1)
+Base.done(sig::Signal, i::Int) = i > prod(size(sig))
 
 # Information specific to regular signals:
 # Hack to get around poor typing in SIUnits math. I know that these are s⁻¹ & s.
