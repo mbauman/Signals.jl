@@ -87,6 +87,20 @@ Base.sub(sig::Signal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = (chec
 # Use the default fast linear indexing for iteration
 Base.linearindexing(::AbstractSignal) = Base.LinearFast()
 
+# TODO: remove this once https://github.com/JuliaLang/julia/pull/10133 is merged
+# (and propagates through the nightlies and Travis)
+import Base: checkbounds, trailingsize
+checkbounds(sz::Int, ::Colon) = nothing
+function checkbounds(A::AbstractArray, I::Union(Real,Colon,AbstractArray)...)
+    n = length(I)
+    if n > 0
+        for dim = 1:(n-1)
+            checkbounds(size(A,dim), I[dim])
+        end
+        checkbounds(trailingsize(A,n), I[n])
+    end
+end
+
 Base.reshape(sig::Signal, idxs::(Int64...,)) = Signal(sig.time, reshape(sig.data, tuple(length(sig.time), idxs...)))
 
 # Information specific to regular signals:
