@@ -18,6 +18,8 @@ sig = Signal(1:100, reshape(1:100*8, 100, 8))
 @test length(collect(sig)) == 8
 @test_throws BoundsError sig[0]
 @test_throws BoundsError sig[9]
+sig2 = reshape(sig, 4, 2)
+@test collect(sig) == collect(sig2)
 
 sig = Signal(1:100, [1:100 [1.:100.]*2 [1:100]*4])
 @test length(sig) == 3

@@ -35,7 +35,7 @@ end
 # The canonical constructor. This must figure out what the element type will be.
 # This is really hard with SubArrays and slices of Signals.
 stagedfunction Signal{T<:SecondT, R, N}(time::AbstractVector{T}, data::AbstractArray{R, N}, dims::(Symbol...), meta::Dict{Symbol, Any})
-    S = SubArray{R, 1, data, tuple(Colon, ntuple(N-1, (i)->Int)...), N}
+    S = SubArray{R, 1, data, (Colon, Int), 2}
     # If the data are Signals themselves, we'll return a SignalVector
     if data <: Signal
         S = Signal{time, R, 1, S} # TODO: is S right here?
