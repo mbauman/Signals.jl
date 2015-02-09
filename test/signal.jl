@@ -3,6 +3,7 @@
 # With no elements
 sig = Signal(1:100)
 @test length(sig) == 0
+@test isempty(collect(sig))
 @test sig.time == 1s:100s
 @test samplingfreq(sig) == 1/s
 @test samplingrate(sig) == 1s
@@ -13,6 +14,8 @@ sig = Signal(1:100)
 sig = Signal(1:100, reshape(1:100*8, 100, 8))
 @test length(sig) == 8
 @test sig[1] == [1:100]
+@test all([sig[i] == [(1:100)+100*(i-1)] for i=1:length(sig)])
+@test length(collect(sig)) == 8
 @test_throws BoundsError sig[0]
 @test_throws BoundsError sig[9]
 

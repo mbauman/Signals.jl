@@ -35,7 +35,7 @@ end
 # The canonical constructor. This must figure out what the element type will be.
 # This is really hard with SubArrays and slices of Signals.
 stagedfunction Signal{T<:SecondT, R, N}(time::AbstractVector{T}, data::AbstractArray{R, N}, dims::(Symbol...), meta::Dict{Symbol, Any})
-    S = SubArray{T, 1, data, tuple(Colon, ntuple(N-1, (i)->Int)...), N}
+    S = SubArray{R, 1, data, tuple(Colon, ntuple(N-1, (i)->Int)...), N}
     # If the data are Signals themselves, we'll return a SignalVector
     if data <: Signal
         S = Signal{time, R, 1, S} # TODO: is S right here?
@@ -80,16 +80,14 @@ Base.elsize(sig::Signal) = size(sig.time)
 Base.getindex(sig::AbstractSignal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = sub(sig, idxs...)
 
 # TODO: We need to propogate dimension names, maybe metadata, too?
-Base.sub(sig::AbstractSignal, idx::Int) = (checkbounds(sig, idx); sub(sig.data, :, idx))
-Base.sub(sig::AbstractSignal, idxs::Int...) = (checkbounds(sig, idxs...); sub(sig.data, :, idxs...))
-Base.sub(sig::AbstractSignal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = (checkbounds(sig, idxs...); Signal(sig.time, sub(sig.data, :, idxs...)))
+Base.sub(sig::Signal, idx::Int) = (checkbounds(sig, idx); sub(sig.data, :, idx))
+Base.sub(sig::Signal, idxs::Int...) = (checkbounds(sig, idxs...); sub(sig.data, :, idxs...))
+Base.sub(sig::Signal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = (checkbounds(sig, idxs...); Signal(sig.time, sub(sig.data, :, idxs...)))
 
-# Use linear indexing for iteration
-Base.start(::Signal) = 1
-Base.next(sig::Signal, i::Int) = (sig[i], i+1)
-Base.done(sig::Signal, i::Int) = i > prod(size(sig))
+# Use the default fast linear indexing for iteration
+Base.linearindexing(::AbstractSignal) = Base.LinearFast()
 
-# Base.reshape(sig::Signal, idxs::(Int64...,)) = (sig.data = reshape(sig.data, tuple(length(sig.time), idxs...)); sig)
+Base.reshape(sig::Signal, idxs::(Int64...,)) = Signal(sig.time, reshape(sig.data, tuple(length(sig.time), idxs...)))
 
 # Information specific to regular signals:
 # Hack to get around poor typing in SIUnits math. I know that these are s⁻¹ & s.
