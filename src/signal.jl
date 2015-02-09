@@ -84,28 +84,6 @@ Base.sub(sig::AbstractSignal, idx::Int) = (checkbounds(sig, idx); sub(sig.data, 
 Base.sub(sig::AbstractSignal, idxs::Int...) = (checkbounds(sig, idxs...); sub(sig.data, :, idxs...))
 Base.sub(sig::AbstractSignal, idxs::Union(Colon,Int,Array{Int,1},Range{Int})...) = (checkbounds(sig, idxs...); Signal(sig.time, sub(sig.data, :, idxs...)))
 
-# TODO: remove this once PR is merged
-import Base: checkbounds, trailingsize
-checkbounds(sz::Int, ::Colon) = nothing
-function checkbounds(A::AbstractMatrix, I::Union(Real,Colon,AbstractArray), J::Union(Real,Colon,AbstractArray))
-    checkbounds(size(A,1), I)
-    checkbounds(size(A,2), J)
-end
-function checkbounds(A::AbstractArray, I::Union(Real,Colon,AbstractArray), J::Union(Real,Colon,AbstractArray))
-    checkbounds(size(A,1), I)
-    checkbounds(trailingsize(A,2), J)
-end
-function checkbounds(A::AbstractArray, I::Union(Real,Colon,AbstractArray)...)
-    n = length(I)
-    if n > 0
-        for dim = 1:(n-1)
-            checkbounds(size(A,dim), I[dim])
-        end
-        checkbounds(trailingsize(A,n), I[n])
-    end
-end
-
-
 # Use linear indexing for iteration
 Base.start(::Signal) = 1
 Base.next(sig::Signal, i::Int) = (sig[i], i+1)
